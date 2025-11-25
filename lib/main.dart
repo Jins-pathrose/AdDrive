@@ -1,4 +1,6 @@
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:addrive/Controller/Login/login_provider.dart';
+import 'package:addrive/Controller/Profile/myprofile.dart';
 import 'package:addrive/Controller/ProfileRegistration/bank_details.dart';
 import 'package:addrive/Controller/ProfileRegistration/personal_details.dart';
 import 'package:addrive/Controller/ProfileRegistration/vehicle_details.dart';
@@ -14,6 +16,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Load environment variables FIRST
+  await dotenv.load(fileName: ".env");
+  
   await SharedPreferences.getInstance();
   // Request location permission at app start
   await Geolocator.requestPermission();
@@ -29,6 +35,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RegisterProvider()),
         ChangeNotifierProvider(create: (_)=> AuthProvider()),
         ChangeNotifierProvider(create: (_)=>OtpProvider()),
+        ChangeNotifierProvider(create: (_) => ProfileProvider()),
       ],
       child: MyApp(),
     ),
@@ -38,9 +45,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
-
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,

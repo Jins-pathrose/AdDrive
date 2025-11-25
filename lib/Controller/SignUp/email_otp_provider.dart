@@ -1,4 +1,5 @@
 // providers/otp_provider.dart
+import 'package:addrive/Model/apiconfig.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -27,7 +28,7 @@ class OtpProvider with ChangeNotifier {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.31:8001/api/driver/verify-otp/'),
+        Uri.parse(ApiConfig.verifyOtpUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email, 'otp': otp}),
       );
@@ -127,7 +128,7 @@ class OtpProvider with ChangeNotifier {
 
     try {
       final response = await http.post(
-        Uri.parse('http://192.168.1.31:8001/api/driver/resend-otp/'),
+        Uri.parse(ApiConfig.resendOtpUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({'email': email}),
       );

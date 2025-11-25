@@ -1,16 +1,20 @@
 import 'dart:io';
 
 import 'package:addrive/Controller/SignUp/signup_provider.dart';
-import 'package:addrive/View/Screens/loginpage.dart';
 import 'package:addrive/View/Screens/otp_email_verification.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
-class RegisterScreen extends StatelessWidget {
+class RegisterScreen extends StatefulWidget {
   RegisterScreen({super.key});
 
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController firstNameCtrl = TextEditingController();
   final TextEditingController lastNameCtrl = TextEditingController();
   final TextEditingController emailCtrl = TextEditingController();
@@ -21,38 +25,50 @@ class RegisterScreen extends StatelessWidget {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final ImagePicker _picker = ImagePicker();
 
+  // Password visibility states
+  bool _isPasswordVisible = false;
+  bool _isConfirmPasswordVisible = false;
+
   // Validation functions
   String? _validateFirstName(String? value) {
-    if (value == null || value.isEmpty) return 'First name is required';
-    if (value.length < 2) return 'First name must be at least 2 characters';
-    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(value)) return 'First name can only contain letters';
+    final v = value?.trim();
+    if (v == null || v.isEmpty) return 'First name is required';
+    if (v.length < 2) return 'First name must be at least 2 characters';
+    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(v))
+      return 'First name can only contain letters';
     return null;
   }
 
   String? _validateLastName(String? value) {
-    if (value == null || value.isEmpty) return 'Last name is required';
-    if (value.length < 2) return 'Last name must be at least 2 characters';
-    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(value)) return 'Last name can only contain letters';
+    final v = value?.trim();
+    if (v == null || v.isEmpty) return 'Last name is required';
+    if (!RegExp(r'^[a-zA-Z]+$').hasMatch(v))
+      return 'Last name can only contain letters';
     return null;
   }
 
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) return 'Email is required';
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) return 'Please enter a valid email address';
+    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value))
+      return 'Please enter a valid email address';
     return null;
   }
 
   String? _validatePhone(String? value) {
     if (value == null || value.isEmpty) return 'Phone number is required';
-    if (!RegExp(r'^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$').hasMatch(value)) return 'Please enter a valid phone number';
-    if (value.length < 10) return 'Phone number must be at least 10 digits';
+    if (!RegExp(
+      r'^[+]*[(]{0,1}[0-9]{1,4}[)]{0,1}[-\s\./0-9]*$',
+    ).hasMatch(value))
+      return 'Please enter a valid phone number';
+if (value.length != 10) return 'Phone number must be exactly 10 digits';
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) return 'Password is required';
     if (value.length < 8) return 'Password must be at least 8 characters';
-    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value)) return 'Password must contain uppercase, lowercase & numbers';
+    if (!RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)').hasMatch(value))
+      return 'Password must contain uppercase, lowercase & numbers';
     return null;
   }
 
@@ -117,11 +133,38 @@ class RegisterScreen extends StatelessWidget {
     );
   }
 
+  // Password visibility icon
+  Widget _passwordVisibilityIcon(bool isPassword, bool isConfirm) {
+    return IconButton(
+      icon: Icon(
+        isPassword
+            ? (_isPasswordVisible
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined)
+            : (isConfirm
+                ? (_isConfirmPasswordVisible
+                    ? Icons.visibility_outlined
+                    : Icons.visibility_off_outlined)
+                : Icons.visibility_off_outlined),
+        color: Colors.grey[400],
+        size: 20,
+      ),
+      onPressed: () {
+        setState(() {
+          if (isPassword) {
+            _isPasswordVisible = !_isPasswordVisible;
+          } else if (isConfirm) {
+            _isConfirmPasswordVisible = !_isConfirmPasswordVisible;
+          }
+        });
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Save the correct context from build()
     final BuildContext screenContext = context;
-    final registerProvider = Provider.of<RegisterProvider>(context, listen: false);
+    final registerProvider = Provider.of<RegisterProvider>(context);
 
     return Scaffold(
       body: Container(
@@ -218,33 +261,119 @@ class RegisterScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // First Name
-                                  Text('First Name', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: firstNameCtrl, validator: _validateFirstName, decoration: _inputDecoration('Your FirstName, e.g., John')),
+                                  Text(
+                                    'First Name',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: firstNameCtrl,
+                                    validator: _validateFirstName,
+                                    decoration: _inputDecoration(
+                                      'Your FirstName, e.g., John',
+                                    ),
+                                  ),
                                   SizedBox(height: 24),
 
                                   // Last Name
-                                  Text('Last Name', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: lastNameCtrl, validator: _validateLastName, decoration: _inputDecoration('Your Lastname, e.g., Doe')),
+                                  Text(
+                                    'Last Name',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: lastNameCtrl,
+                                    validator: _validateLastName,
+                                    decoration: _inputDecoration(
+                                      'Your Lastname, e.g., Doe',
+                                    ),
+                                  ),
                                   SizedBox(height: 24),
 
                                   // Email
-                                  Text('Email', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: emailCtrl, validator: _validateEmail, keyboardType: TextInputType.emailAddress, decoration: _inputDecoration('Your email, e.g., johndoe@gmail.com')),
+                                  Text(
+                                    'Email',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: emailCtrl,
+                                    validator: _validateEmail,
+                                    keyboardType: TextInputType.emailAddress,
+                                    decoration: _inputDecoration(
+                                      'Your email, e.g., johndoe@gmail.com',
+                                    ),
+                                  ),
                                   SizedBox(height: 24),
 
                                   // Phone
-                                  Text('Phone Number', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: phoneCtrl, validator: _validatePhone, keyboardType: TextInputType.phone, decoration: _inputDecoration('Your phone number, e.g., +01 12 xxx xxx')),
+                                  Text(
+                                    'Phone Number',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: phoneCtrl,
+                                    validator: _validatePhone,
+                                    keyboardType: TextInputType.phone,
+                                    decoration: _inputDecoration(
+                                      'Your phone number, e.g., +01 12 xxx xxx',
+                                    ),
+                                  ),
                                   SizedBox(height: 24),
 
                                   // Password
-                                  Text('Password', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: passwordCtrl, validator: _validatePassword, obscureText: true, decoration: _inputDecoration('Your password, at least 8 character').copyWith(suffixIcon: _visibilityIcon())),
+                                  Text(
+                                    'Password',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: passwordCtrl,
+                                    validator: _validatePassword,
+                                    obscureText: !_isPasswordVisible,
+                                    decoration: _inputDecoration(
+                                      'Your password, at least 8 character',
+                                    ).copyWith(
+                                      suffixIcon: _passwordVisibilityIcon(true, false),
+                                    ),
+                                  ),
                                   SizedBox(height: 24),
 
                                   // Confirm Password
-                                  Text('Confirm Password', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.black87)),
-                                  TextFormField(controller: confirmCtrl, validator: _validateConfirmPassword, obscureText: true, decoration: _inputDecoration('Re-type your password').copyWith(suffixIcon: _visibilityIcon())),
+                                  Text(
+                                    'Confirm Password',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  TextFormField(
+                                    controller: confirmCtrl,
+                                    validator: _validateConfirmPassword,
+                                    obscureText: !_isConfirmPasswordVisible,
+                                    decoration: _inputDecoration(
+                                      'Re-type your password',
+                                    ).copyWith(
+                                      suffixIcon: _passwordVisibilityIcon(false, true),
+                                    ),
+                                  ),
                                   SizedBox(height: 40),
 
                                   // Register Button
@@ -255,15 +384,27 @@ class RegisterScreen extends StatelessWidget {
                                       onPressed: registerProvider.isLoading
                                           ? null
                                           : () async {
+                                              // Trigger form validation manually
                                               if (_formKey.currentState!.validate()) {
+                                                // Only proceed if form is valid
                                                 final imageError = registerProvider.validateImage();
                                                 if (imageError != null) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(imageError), backgroundColor: Colors.red));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(imageError),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
                                                   return;
                                                 }
 
                                                 if (passwordCtrl.text != confirmCtrl.text) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Passwords do not match"), backgroundColor: Colors.red));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text("Passwords do not match"),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
                                                   return;
                                                 }
 
@@ -277,21 +418,66 @@ class RegisterScreen extends StatelessWidget {
 
                                                 if (success) {
                                                   registerProvider.clearImage();
-                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Registration Successful!"), backgroundColor: Colors.green));
-                                                  Navigator.push(context, MaterialPageRoute(builder: (_) => OtpVerificationScreen(email: emailCtrl.text.trim())));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text("Registration Successful!"),
+                                                      backgroundColor: Colors.green,
+                                                    ),
+                                                  );
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => OtpVerificationScreen(
+                                                        email: emailCtrl.text.trim(),
+                                                      ),
+                                                    ),
+                                                  );
                                                 } else {
-                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(registerProvider.errorMessage ?? "Registration Failed"), backgroundColor: Colors.red));
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        registerProvider.errorMessage ?? "Registration Failed",
+                                                      ),
+                                                      backgroundColor: Colors.red,
+                                                    ),
+                                                  );
                                                 }
+                                              } else {
+                                                // Form is invalid, show error message
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text("Please fix the errors in the form"),
+                                                    backgroundColor: Colors.red,
+                                                  ),
+                                                );
                                               }
                                             },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: Color(0xFF6C3FE4),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                                        backgroundColor: registerProvider.isLoading
+                                            ? Colors.grey[400]
+                                            : Color(0xFF6C3FE4),
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(30),
+                                        ),
                                         elevation: 0,
                                       ),
                                       child: registerProvider.isLoading
-                                          ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white)))
-                                          : Text('Register', style: AppTextStyle.base.copyWith(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
+                                          ? SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                              ),
+                                            )
+                                          : Text(
+                                              'Register',
+                                              style: AppTextStyle.base.copyWith(
+                                                fontSize: 15,
+                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                              ),
+                                            ),
                                     ),
                                   ),
                                   SizedBox(height: 18),
@@ -299,13 +485,29 @@ class RegisterScreen extends StatelessWidget {
                                   // Login Link
                                   Center(
                                     child: GestureDetector(
-                                      onTap: registerProvider.isLoading ? null : () => Navigator.pop(context),
+                                      onTap: registerProvider.isLoading
+                                          ? null
+                                          : () => Navigator.pop(context),
                                       child: RichText(
                                         text: TextSpan(
-                                          style: TextStyle(fontSize: 13, color: Colors.grey[700]),
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: Colors.grey[700],
+                                          ),
                                           children: [
-                                            TextSpan(text: 'Already have an account? ', style: AppTextStyle.base),
-                                            TextSpan(text: 'Login', style: AppTextStyle.base.copyWith(color: registerProvider.isLoading ? Colors.grey : Color(0xFF6C3FE4), fontWeight: FontWeight.w600)),
+                                            TextSpan(
+                                              text: 'Already have an account? ',
+                                              style: AppTextStyle.base,
+                                            ),
+                                            TextSpan(
+                                              text: 'Login',
+                                              style: AppTextStyle.base.copyWith(
+                                                color: registerProvider.isLoading
+                                                    ? Colors.grey
+                                                    : Color(0xFF6C3FE4),
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -327,7 +529,9 @@ class RegisterScreen extends StatelessWidget {
                               return Column(
                                 children: [
                                   GestureDetector(
-                                    onTap: () => _showImageSourceDialog(screenContext), // Use saved context
+                                    onTap: registerProvider.isLoading
+                                        ? null
+                                        : () => _showImageSourceDialog(screenContext),
                                     child: Container(
                                       width: 90,
                                       height: 90,
@@ -335,7 +539,11 @@ class RegisterScreen extends StatelessWidget {
                                         shape: BoxShape.circle,
                                         color: const Color.fromARGB(255, 229, 228, 228),
                                         boxShadow: [
-                                          BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 15, offset: Offset(0, 5)),
+                                          BoxShadow(
+                                            color: Colors.black.withOpacity(0.08),
+                                            blurRadius: 15,
+                                            offset: Offset(0, 5),
+                                          ),
                                         ],
                                       ),
                                       child: provider.imageFile != null
@@ -347,7 +555,11 @@ class RegisterScreen extends StatelessWidget {
                                                 fit: BoxFit.cover,
                                               ),
                                             )
-                                          : Icon(Icons.camera_alt, size: 35, color: Colors.grey[600]),
+                                          : Icon(
+                                              Icons.camera_alt,
+                                              size: 35,
+                                              color: Colors.grey[600],
+                                            ),
                                     ),
                                   ),
                                   SizedBox(height: 8),
@@ -372,20 +584,23 @@ class RegisterScreen extends StatelessWidget {
   InputDecoration _inputDecoration(String hint) {
     return InputDecoration(
       hintText: hint,
-      hintStyle: AppTextStyle.base.copyWith(color: Colors.grey[350], fontSize: 12),
-      enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey[300]!)),
-      focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF6C3FE4), width: 2)),
-      errorBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2)),
-      focusedErrorBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.red, width: 2)),
+      hintStyle: AppTextStyle.base.copyWith(
+        color: Colors.grey[350],
+        fontSize: 12,
+      ),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.grey[300]!),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: Color(0xFF6C3FE4), width: 2),
+      ),
+      errorBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.red, width: 2),
+      ),
+      focusedErrorBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: Colors.red, width: 2),
+      ),
       contentPadding: EdgeInsets.symmetric(vertical: 8),
-    );
-  }
-
-  // Helper: Visibility icon
-  Widget _visibilityIcon() {
-    return IconButton(
-      icon: Icon(Icons.visibility_outlined, color: Colors.grey[400], size: 20),
-      onPressed: () {},
     );
   }
 }

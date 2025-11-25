@@ -30,7 +30,38 @@ class _OtpVerificationScreenContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final otpProvider = Provider.of<OtpProvider>(context);
+// Helper method to get current OTP from controllers
+String _getCurrentOtp() {
+  // You'll need to access the OtpInputFields state or use a GlobalKey
+  final otpInputFieldsState = context.findAncestorStateOfType<_OtpInputFieldsState>();
+  return otpInputFieldsState?._enteredOtp ?? '';
+}
 
+// Manual verification method
+void _verifyOtpManually(String otp) async {
+  final otpProvider = Provider.of<OtpProvider>(context, listen: false);
+  
+  await otpProvider.verifyOtp(email, otp);
+  
+  if (!context.mounted) return;
+  
+  await Future.delayed(Duration(milliseconds: 100));
+  
+  if (otpProvider.isVerified) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Email verified successfully!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+    
+    Navigator.pushReplacement(
+      context, 
+      MaterialPageRoute(builder: (context) => const PersonalDetails())
+    );
+  }
+}
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -101,7 +132,7 @@ class _OtpVerificationScreenContent extends StatelessWidget {
                     child: Align(
                       alignment: Alignment.centerLeft,
                       child: Text(
-                        'Verify\nEmail',
+                        'Verify Email',
                         style: AppTextStyle.base.copyWith(
                           fontSize: 44,
                           fontWeight: FontWeight.w600,
@@ -212,7 +243,7 @@ class _OtpVerificationScreenContent extends StatelessWidget {
                                   onTap: () {
                                     // Handle resend OTP
                                     if (!otpProvider.isLoading) {
-                                      // Add resend OTP logic here
+          otpProvider.resendOtp(email);
                                     }
                                   },
                                   child: Text(
@@ -232,11 +263,22 @@ class _OtpVerificationScreenContent extends StatelessWidget {
                               width: double.infinity,
                               height: 52,
                               child: ElevatedButton(
-                                onPressed: otpProvider.isLoading
-                                    ? null
-                                    : () {
-                                        // Manual verification as fallback
-                                      },
+    onPressed: otpProvider.isLoading
+        ? null
+        : () {
+            // Manual verification when button is pressed
+            final otp = _getCurrentOtp();
+            if (otp.length == 6) {
+              _verifyOtpManually(otp);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Please enter all 6 digits'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: Color(0xFF6C3FE4),
                                   shape: RoundedRectangleBorder(

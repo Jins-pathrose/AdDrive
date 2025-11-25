@@ -1,11 +1,27 @@
+import 'package:addrive/Controller/Profile/myprofile.dart';
 import 'package:addrive/View/Screens/ProfileRegistration/personaldetails.dart';
 import 'package:addrive/View/Screens/loginpage.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  @override
+  void initState() {
+    super.initState();
+    // Fetch profile data when the page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ProfileProvider>().fetchProfileData();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -14,184 +30,316 @@ class ProfilePage extends StatelessWidget {
       body: Stack(
         children: [
           // Blurred colored circles in background
-         BackgroundDecoration(),
+          BackgroundDecoration(),
           // Main content
           SafeArea(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 18),
-                    // Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Consumer<ProfileProvider>(
+              builder: (context, profileProvider, child) {
+                if (profileProvider.isLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (profileProvider.error.isNotEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          'My Profile',
+                          'Error: ${profileProvider.error}',
+                          style: AppTextStyle.base.copyWith(color: Colors.red),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton(
+                          onPressed: () {
+                            profileProvider.fetchProfileData();
+                          },
+                          child: Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final profileData = profileProvider.profileData;
+                if (profileData == null) {
+                  return Center(
+                    child: Text(
+                      'No profile data found',
+                      style: AppTextStyle.base.copyWith(color: Colors.grey),
+                    ),
+                  );
+                }
+
+                return SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 18),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 18),
+                        // Header
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'My Profile',
+                              style: AppTextStyle.base.copyWith(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.grey[100],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Stack(
+                                children: [
+                                  const Icon(
+                                    Icons.notifications_outlined,
+                                    color: Colors.black87,
+                                    size: 24,
+                                  ),
+                                  Positioned(
+                                    right: 0,
+                                    top: 0,
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: Colors.red,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 30),
+                        // Profile Image
+                        Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.blue.shade600,
+                                Colors.blue.shade400,
+                              ],
+                            ),
+                          ),
+                          child: CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.transparent,
+                            backgroundImage:
+                                profileData.profile.profilePicture.isNotEmpty
+                                ? NetworkImage(
+                                    '${profileData.profile.profilePicture}',
+                                  )
+                                : const AssetImage(
+                                        'assets/images/Jins_Black.jpg',
+                                      )
+                                      as ImageProvider,
+                          ),
+                        ),
+
+                        const SizedBox(height: 10),
+                        // Name and Contact Info
+                        Text(
+                          profileData.profile.fullName,
                           style: AppTextStyle.base.copyWith(
-                            fontSize: 24,
+                            fontSize: 20,
                             fontWeight: FontWeight.bold,
                             color: Colors.black,
                           ),
                         ),
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[100],
-                            shape: BoxShape.circle,
+                        Text(
+                          profileData.profile.email,
+                          style: AppTextStyle.base.copyWith(
+                            fontSize: 13,
+                            color: Colors.black87,
                           ),
-                          child: Stack(
-                            children: [
-                              const Icon(
-                                Icons.notifications_outlined,
-                                color: Colors.black87,
-                                size: 24,
+                        ),
+                        Text(
+                          profileData.profile.phoneNumber,
+                          style: AppTextStyle.base.copyWith(
+                            fontSize: 13,
+                            color: Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        // Edit Profile Button
+                        ElevatedButton(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PersonalDetails(),
                               ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
+                            );
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5F33E1),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(25),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Edit Profile',
+                                style: AppTextStyle.base.copyWith(
+                                  fontSize: 12,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
+                              const SizedBox(width: 8),
+                              const Icon(Icons.edit, color: Colors.white),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-                    // Profile Image
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.blue.shade600, Colors.blue.shade400],
-                        ),
-                      ),
-                      child: CircleAvatar(
-                        radius: 60,
-                        backgroundColor: Colors
-                            .transparent, // make background transparent to show gradient
-                        backgroundImage: AssetImage(
-                          'assets/images/Jins_Black.jpg',
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 10),
-                    // Name and Contact Info
-                    Text(
-                      'Pathrose Jinz',
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black,
-                      ),
-                    ),
-                    Text(
-                      'pathrosetenrose@gmail.com',
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    Text(
-                      '+91 97858 28487',
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 13,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-                    // Edit Profile Button
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PersonalDetails(),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFF5F33E1),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(25),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min, // keeps button compact
-                        children: [
-                          Text(
-                            'Edit Profile',
-                            style: AppTextStyle.base.copyWith(
-                              fontSize: 12,
-                              color: Colors.white,
-                              fontWeight: FontWeight.w500,
+                        const SizedBox(height: 30),
+                        // Vehicle Details Section
+                        // Vehicle Details Section
+                        _buildSectionCard(
+                          icon: Icons.directions_car,
+                          title: 'Vehicle Details',
+                          children: [
+                            _buildDetailRow(
+                              'Vehicle Number',
+                              profileData.vehicleDetails['vehicle_number'] ??
+                                  'N/A',
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Icon(Icons.edit, color: Colors.white),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    // Vehicle Details Section
-                    _buildSectionCard(
-                      icon: Icons.directions_car,
-                      title: 'Vehicle Details',
-                      children: [
-                        _buildDetailRow('Vehicle Number', 'KL-50-AN-5220'),
-                        _buildDetailRow('Vehicle Model', 'Honda Civic'),
-                        _buildDetailRow('Owner Name', 'Jinz Pathrose'),
-                        _buildDetailRow('Vehicle Images', 'View', isLink: true),
+                            _buildDetailRow(
+                              'Vehicle Model',
+                              profileData.vehicleDetails['vehicle_model'] ??
+                                  'N/A',
+                            ),
+                            _buildDetailRow(
+                              'Owner Name',
+                              profileData.vehicleDetails['owner_name'] ?? 'N/A',
+                            ),
+                            _buildDetailRow(
+                              'Vehicle Images',
+                              'View',
+                              isLink: true,
+                              onTap: () => _showVehicleImages(
+                                profileData.vehicleDetails,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        // Bank/Fleet Details Section
+                        _buildSectionCard(
+                          icon: profileData.bankDetails == null
+                              ? Icons.business
+                              : Icons.account_balance,
+                          title: profileData.bankDetails == null
+                              ? 'Fleet Details'
+                              : 'Bank Details',
+                          children: profileData.bankDetails == null
+                              ? [
+                                  // Fleet Details
+                                  _buildDetailRow(
+                                    'Fleet Name',
+                                    profileData.fleetDetails?['fleet_name'] ??
+                                        'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'Fleet Owner',
+                                    profileData.fleetDetails?['fleet_owner'] ??
+                                        'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'Phone Number',
+                                    profileData.fleetDetails?['phone_number'] ??
+                                        'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'Fleet Profile',
+                                    'View',
+                                    isLink: true,
+                                    onTap: () => _showImagePopup(
+                                      profileData
+                                              .fleetDetails?['fleet_profile'] ??
+                                          '',
+                                      'Fleet Profile',
+                                    ),
+                                  ),
+                                ]
+                              : [
+                                  // Bank Details
+                                  _buildDetailRow(
+                                    'Account Number',
+                                    _maskAccountNumber(
+                                      profileData.bankDetails?.accountNumber ??
+                                          '',
+                                    ),
+                                  ),
+                                  _buildDetailRow(
+                                    'Bank Name',
+                                    profileData.bankDetails?.bankName ?? 'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'Branch Name',
+                                    profileData.bankDetails?.branchName ??
+                                        'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'IFSC Code',
+                                    profileData.bankDetails?.ifscCode ?? 'N/A',
+                                  ),
+                                  _buildDetailRow(
+                                    'Passbook Image',
+                                    'View',
+                                    isLink: true,
+                                    onTap: () => _showImagePopup(
+                                      profileData.bankDetails?.passbookImage ??
+                                          '',
+                                      'Passbook Image',
+                                    ),
+                                  ),
+                                ],
+                        ),
+                        const SizedBox(height: 20),
+                        // Notifications
+                        _buildSettingRow(
+                          context: context,
+                          icon: Icons.notifications,
+                          title: 'Notifications',
+                          value: 'On',
+                          isLink: true,
+                        ),
+                        const SizedBox(height: 20),
                       ],
                     ),
-                    const SizedBox(height: 20),
-                    // Bank Details Section
-                    _buildSectionCard(
-                      icon: Icons.account_balance,
-                      title: 'Bank Details',
-                      children: [
-                        _buildDetailRow('Account Number', 'ABCD0025587458'),
-                        _buildDetailRow('Bank Name', 'HDFC Bank'),
-                        _buildDetailRow('Branch Name', 'Palakkad'),
-                        _buildDetailRow('IFSC Code', 'HDFP0258'),
-                        _buildDetailRow('Passbook Image', 'View', isLink: true),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Notifications
-                    _buildSettingRow(
-                      context: context,
-                      icon: Icons.notifications,
-                      title: 'Notifications',
-                      value: 'On',
-                      isLink: true,
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              ),
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  String _maskAccountNumber(String accountNumber) {
+    if (accountNumber.length <= 4) return accountNumber;
+    return 'XXXX${accountNumber.substring(accountNumber.length - 4)}';
   }
 
   Widget _buildSectionCard({
@@ -237,7 +385,12 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  Widget _buildDetailRow(String label, String value, {bool isLink = false}) {
+  Widget _buildDetailRow(
+    String label,
+    String value, {
+    bool isLink = false,
+    VoidCallback? onTap,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -250,12 +403,18 @@ class ProfilePage extends StatelessWidget {
               color: Colors.black87,
             ),
           ),
-          Text(
-            value,
-            style: AppTextStyle.base.copyWith(
-              fontSize: 14,
-              color: isLink ? Colors.blue : Colors.black,
-              fontWeight: FontWeight.w500,
+          GestureDetector(
+            onTap: isLink ? onTap : null,
+            child: Text(
+              value,
+              style: AppTextStyle.base.copyWith(
+                fontSize: 14,
+                color: isLink ? Colors.blue : Colors.black,
+                fontWeight: FontWeight.w500,
+                decoration: isLink
+                    ? TextDecoration.underline
+                    : TextDecoration.none,
+              ),
             ),
           ),
         ],
@@ -304,7 +463,7 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               Text(
-                'On',
+                value,
                 style: AppTextStyle.base.copyWith(
                   fontSize: 14,
                   color: Colors.blue,
@@ -313,13 +472,13 @@ class ProfilePage extends StatelessWidget {
               ),
             ],
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  Icon(Icons.person, size: 20, color: Colors.black),
+                  const Icon(Icons.person, size: 20, color: Colors.black),
                   const SizedBox(width: 12),
                   Text(
                     'Account',
@@ -332,13 +491,7 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
               GestureDetector(
-                onTap: () {
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(builder: (builder) => LoginScreen()),
-                    (Route<dynamic> route) => false,
-                  );
-                },
+                onTap: () => _showLogoutConfirmation(),
                 child: Text(
                   'Logout',
                   style: AppTextStyle.base.copyWith(
@@ -354,4 +507,160 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
+
+  void _showVehicleImages(Map<String, dynamic> vehicleDetails) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Vehicle Images',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              SingleChildScrollView(
+                child: Column(
+                  children: [
+                    if (vehicleDetails['front_view'] != null &&
+                        vehicleDetails['front_view'].isNotEmpty)
+                      _buildImagePreview(
+                        'Front View',
+                        vehicleDetails['front_view'],
+                      ),
+                    if (vehicleDetails['back_view'] != null &&
+                        vehicleDetails['back_view'].isNotEmpty)
+                      _buildImagePreview(
+                        'Back View',
+                        vehicleDetails['back_view'],
+                      ),
+                    if (vehicleDetails['right_view'] != null &&
+                        vehicleDetails['right_view'].isNotEmpty)
+                      _buildImagePreview(
+                        'Right Side',
+                        vehicleDetails['right_view'],
+                      ),
+                    if (vehicleDetails['left_view'] != null &&
+                        vehicleDetails['left_view'].isNotEmpty)
+                      _buildImagePreview(
+                        'Left Side',
+                        vehicleDetails['left_view'],
+                      ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showImagePopup(String imageUrl, String title) {
+    if (imageUrl.isEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No $title image available')));
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 16),
+              Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  image: DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+              SizedBox(height: 16),
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Close'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview(String title, String imageUrl) {
+    return Column(
+      children: [
+        Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+        SizedBox(height: 8),
+        Container(
+          width: 150,
+          height: 100,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8),
+            image: DecorationImage(
+              image: NetworkImage(imageUrl),
+              fit: BoxFit.cover,
+            ),
+            border: Border.all(color: Colors.grey),
+          ),
+        ),
+        SizedBox(height: 16),
+      ],
+    );
+  }
+  void _showLogoutConfirmation() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Logout'),
+      content: Text('Are you sure you want to logout?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancel'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context); // Close the dialog
+            
+            // Perform logout and redirect immediately
+            final profileProvider = context.read<ProfileProvider>();
+            await profileProvider.logout();
+            
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+              (Route<dynamic> route) => false,
+            );
+          },
+          child: Text(
+            'Yes, Logout',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

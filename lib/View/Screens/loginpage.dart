@@ -1,28 +1,46 @@
 import 'package:addrive/Controller/Login/login_provider.dart';
 import 'package:addrive/View/BottomNavigator/bottomnavigator.dart';
+import 'package:addrive/View/Screens/forgotpassword.dart';
 import 'package:addrive/View/Screens/signinpage.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   LoginScreen({super.key});
 
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  
+  // Password visibility state
+  bool _isPasswordVisible = false;
 
   void _login(BuildContext context) async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
       
-      await authProvider.login(
+      final success = await authProvider.login(
         _emailController.text.trim(),
         _passwordController.text,
       );
 
-      if (authProvider.errorMessage.isEmpty) {
-        // Login successful
+      if (success) {
+        // Login successful - show snackbar
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login Successful!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        
+        // Navigate to home screen
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (context) => BottomNavigator()),
@@ -52,14 +70,19 @@ class LoginScreen extends StatelessWidget {
   }
 
   void _handleForgotPassword(BuildContext context) {
-    if (_emailController.text.isEmpty) {
-      _showErrorDialog(context, 'Please enter your email to reset password');
-      return;
-    }
-    
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    authProvider.resendOtp(_emailController.text.trim());
+  if (_emailController.text.isEmpty) {
+    _showErrorDialog(context, 'Please enter your email to reset password');
+    return;
   }
+  
+  // Navigate to ForgotPasswordScreen with pre-filled email
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ForgotPasswordScreen(),
+    ),
+  );
+}
 
   void _navigateToRegister(BuildContext context) {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
@@ -69,6 +92,13 @@ class LoginScreen extends StatelessWidget {
         MaterialPageRoute(builder: (context) => RegisterScreen()),
       );
     }
+  }
+
+  // Toggle password visibility
+  void _togglePasswordVisibility() {
+    setState(() {
+      _isPasswordVisible = !_isPasswordVisible;
+    });
   }
 
   @override
@@ -218,16 +248,21 @@ class LoginScreen extends StatelessWidget {
                                   ),
                                   TextFormField(
                                     controller: _passwordController,
-                                    obscureText: true,
+                                    obscureText: !_isPasswordVisible,
                                     decoration: InputDecoration(
                                       hintText: 'Enter your password',
                                       hintStyle: AppTextStyle.base.copyWith(
                                         color: Colors.grey[400],
                                         fontSize: 12,
                                       ),
-                                      suffixIcon: Icon(
-                                        Icons.visibility_off_outlined,
-                                        color: Colors.grey[400],
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _isPasswordVisible
+                                              ? Icons.visibility_outlined
+                                              : Icons.visibility_off_outlined,
+                                          color: Colors.grey[400],
+                                        ),
+                                        onPressed: _togglePasswordVisibility,
                                       ),
                                       enabledBorder: UnderlineInputBorder(
                                         borderSide: BorderSide(
