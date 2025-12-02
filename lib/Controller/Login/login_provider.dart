@@ -245,7 +245,7 @@ Future<bool> resendForgotOtp(String email) async {
 
   try {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/driver/resend-forgot-otp/'),
+      Uri.parse('${ApiConfig.baseUrl}/api/driver/resend-forgot-otp/'),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -285,7 +285,7 @@ Future<bool> verifyForgotOtp(String email, String otp) async {
 
   try {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/driver/verify-forgot-otp/'),
+      Uri.parse('https://addrive.kkms.co.in/api/driver/verify-forgot-otp/'),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -306,7 +306,7 @@ Future<bool> verifyForgotOtp(String email, String otp) async {
       return true;
     } else {
       final Map<String, dynamic> errorData = json.decode(response.body);
-      _errorMessage = errorData['message'] ?? errorData['error'] ?? 'Invalid OTP';
+      _errorMessage = errorData['message'] ?? errorData['Oops!'] ?? 'Invalid OTP';
       _isLoading = false;
       notifyListeners();
       return false;
@@ -326,7 +326,7 @@ Future<bool> resetPassword(String email, String newPassword) async {
 
   try {
     final response = await http.post(
-      Uri.parse('${ApiConfig.baseUrl}/driver/reset-password/'),
+      Uri.parse('https://addrive.kkms.co.in/api/driver/reset-password/'),
       headers: {
         'Content-Type': 'application/json',
       },

@@ -48,4 +48,12 @@ class ApiConfig {
   static String get fleetListingUrl {
     return '$baseUrl/api/driver/active_fleets/';
   }
+
+  static String get campaignListingUrl {
+    return '$baseUrl/api/driver/campaigns/';
+  }
+
+  static String get joinCampaignUrl {
+    return '$baseUrl/api/driver/join-campaign/';
+  }
 }

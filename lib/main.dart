@@ -36,6 +36,7 @@ void main() async {
         ChangeNotifierProvider(create: (_)=> AuthProvider()),
         ChangeNotifierProvider(create: (_)=>OtpProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
+        ChangeNotifierProvider(create: (_) => CampaignsProvider()),
       ],
       child: MyApp(),
     ),

@@ -1,0 +1,118 @@
+// widgets/campaigns_list.dart
+import 'package:addrive/Controller/campaigns_tab.dart';
+import 'package:addrive/Model/campaigns_model.dart';
+import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'campaign_card.dart';
+
+class CampaignsList extends StatelessWidget {
+  final List<Campaign> campaigns;
+  final bool isCompletedTab;
+  final VoidCallback onRetry;
+  final bool isLoading;
+  final String? error;
+
+  const CampaignsList({
+    super.key,
+    required this.campaigns,
+    required this.isCompletedTab,
+    required this.onRetry,
+    this.isLoading = false,
+    this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(
+          color: Color(0xFF6C5CE7),
+        ),
+      );
+    }
+
+    if (error != null) {
+      return _buildErrorState();
+    }
+
+    if (campaigns.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: campaigns.length,
+      itemBuilder: (context, index) {
+        final campaign = campaigns[index];
+        return CampaignCard(
+          campaign: campaign,
+          onJoinPressed: () => _handleJoinCampaign(context, campaign),
+        );
+      },
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            error!,
+            style: AppTextStyle.base.copyWith(
+              color: Colors.red,
+              fontSize: 16,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: onRetry,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C5CE7),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Text(
+        isCompletedTab ? 'No completed campaigns' : 'No campaigns available',
+        style: const TextStyle(
+          fontSize: 16,
+          color: Colors.grey,
+        ),
+      ),
+    );
+  }
+
+  void _handleJoinCampaign(BuildContext context, Campaign campaign) {
+    // Handle join campaign logic
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Join Campaign'),
+        content: Text('Do you want to join ${campaign.name}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Provider.of<CampaignsProvider>(context, listen: false).joinCampaign(campaign.id);
+            },
+            child: const Text('Join'),
+          ),
+        ],
+      ),
+    );
+  }
+}

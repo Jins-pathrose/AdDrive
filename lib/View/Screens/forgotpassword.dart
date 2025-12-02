@@ -41,7 +41,7 @@ class ForgotPasswordScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error'),
+        title: Text('Oops!'),
         content: Text(message),
         actions: [
           TextButton(
@@ -313,7 +313,7 @@ class _OtpVerificationScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error'),
+        title: Text('Oops!'),
         content: Text(message),
         actions: [
           TextButton(
@@ -598,7 +598,7 @@ class _ResetPasswordScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Error'),
+        title: Text('Oops!'),
         content: Text(message),
         actions: [
           TextButton(

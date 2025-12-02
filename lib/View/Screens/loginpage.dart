@@ -70,10 +70,10 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleForgotPassword(BuildContext context) {
-  if (_emailController.text.isEmpty) {
-    _showErrorDialog(context, 'Please enter your email to reset password');
-    return;
-  }
+  // if (_emailController.text.isEmpty) {
+  //   _showErrorDialog(context, 'Please enter your email to reset password');
+  //   return;
+  // }
   
   // Navigate to ForgotPasswordScreen with pre-filled email
   Navigator.push(
