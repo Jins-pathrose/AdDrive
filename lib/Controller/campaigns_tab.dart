@@ -74,32 +74,35 @@ class CampaignsProvider with ChangeNotifier {
     }
   }
 
-  Future<void> joinCampaign( String campaignId) async {
-    print(campaignId);
-    print('11111111');
+  Future<bool> joinCampaign(String campaignId) async {
     final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('access_token');
+    final token = prefs.getString('access_token');
+
     try {
-      
-      final response = await http.post(
-        Uri.parse(ApiConfig.joinCampaignUrl),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: jsonEncode({"campaign_id": campaignId}),
+      final url = Uri.parse(
+        ApiConfig.joinCampaignUrl(campaignId),
       );
 
-      if (response.statusCode == 200) {
-        print('00000000000000000000000000000000000000');
-        // Refresh campaigns after joining
+      final response = await http.post(
+        url,
+        headers: {
+          "Authorization": "Bearer $token",
+          "Accept": "application/json",
+
+        },
+        body: "", // MUST send empty body so Content-Length=0
+      );
+      print("Status: ${response.statusCode}");
+      print("Body: ${response.body}");
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
         await fetchCampaigns(token!);
-      } else {
-        throw Exception('Failed to join campaign: ${response.statusCode}');
+        return true;
       }
-      print(response.statusCode);
+      return false;
     } catch (e) {
-      rethrow;
+      print("Error: $e");
+      return false;
     }
   }
 
@@ -127,4 +130,68 @@ class CampaignsProvider with ChangeNotifier {
   void refresh() {
     notifyListeners();
   }
+
+  // campaigns_provider.dart - Add these methods to CampaignsProvider class
+
+Future<Map<String, dynamic>?> checkCampaignStatus(String campaignId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+
+  try {
+    final url = Uri.parse(
+      ApiConfig.joinCampaignUrl(campaignId),
+    );
+
+    final response = await http.get(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      return {
+        'campaign_id': data['campaign_id'],
+        'request_id': data['request_id'],
+        'status': data['status'],
+      };
+    }
+    return null;
+  } catch (e) {
+    print("Error checking campaign status: $e");
+    return null;
+  }
+}
+
+Future<bool> cancelCampaignRequest(String requestId) async {
+  final prefs = await SharedPreferences.getInstance();
+  final token = prefs.getString('access_token');
+  print(requestId);
+  print('0000000');
+  try {
+    final url = Uri.parse(
+      ApiConfig.cancelRequestsUrl(requestId),
+    );
+
+    final response = await http.post(
+      url,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Accept": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200 || response.statusCode == 204) {
+      return true;
+    }
+    print(response.statusCode);
+    print(response.body);
+    return false;
+  } catch (e) {
+    print("Error canceling campaign request: $e");
+    return false;
+  }
+}
 }

@@ -12,6 +12,7 @@ class CampaignsList extends StatelessWidget {
   final VoidCallback onRetry;
   final bool isLoading;
   final String? error;
+  final BuildContext rootContext;
 
   const CampaignsList({
     super.key,
@@ -20,15 +21,14 @@ class CampaignsList extends StatelessWidget {
     required this.onRetry,
     this.isLoading = false,
     this.error,
+    required this.rootContext,
   });
 
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Center(
-        child: CircularProgressIndicator(
-          color: Color(0xFF6C5CE7),
-        ),
+        child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
       );
     }
 
@@ -60,10 +60,7 @@ class CampaignsList extends StatelessWidget {
         children: [
           Text(
             error!,
-            style: AppTextStyle.base.copyWith(
-              color: Colors.red,
-              fontSize: 16,
-            ),
+            style: AppTextStyle.base.copyWith(color: Colors.red, fontSize: 16),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 16),
@@ -84,30 +81,44 @@ class CampaignsList extends StatelessWidget {
     return Center(
       child: Text(
         isCompletedTab ? 'No completed campaigns' : 'No campaigns available',
-        style: const TextStyle(
-          fontSize: 16,
-          color: Colors.grey,
-        ),
+        style: const TextStyle(fontSize: 16, color: Colors.grey),
       ),
     );
   }
 
   void _handleJoinCampaign(BuildContext context, Campaign campaign) {
-    // Handle join campaign logic
+    final parentContext = context; // <-- store safe context
+
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Join Campaign'),
         content: Text('Do you want to join ${campaign.name}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Provider.of<CampaignsProvider>(context, listen: false).joinCampaign(campaign.id);
+            onPressed: () async {
+              Navigator.pop(dialogContext); // close dialog
+
+              bool success = await Provider.of<CampaignsProvider>(
+                parentContext,
+                listen: false,
+              ).joinCampaign(campaign.id);
+
+              // Use safe parent context, not dialogContext
+              ScaffoldMessenger.of(rootContext).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    success
+                        ? "Join request submitted successfully!"
+                        : "Failed to submit join request.",
+                  ),
+                  backgroundColor: success ? Colors.green : Colors.red,
+                ),
+              );
             },
             child: const Text('Join'),
           ),

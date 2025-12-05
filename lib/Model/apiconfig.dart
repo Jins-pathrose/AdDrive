@@ -1,3 +1,4 @@
+import 'package:addrive/Model/campaigns_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConfig {
@@ -53,7 +54,15 @@ class ApiConfig {
     return '$baseUrl/api/driver/campaigns/';
   }
 
-  static String get joinCampaignUrl {
-    return '$baseUrl/api/driver/join-campaign/';
+  static String joinCampaignUrl(String campaignId) {
+  return '$baseUrl/api/driver/join-campaign/$campaignId/';
+}
+ 
+ static String  cancelRequestsUrl(String requestId) {
+    return '$baseUrl/api/campaign/cancel-request/$requestId/';
+  }
+
+  static String get CampaignButton {
+    return '$baseUrl/api/driver/campaign-requests/';
   }
 }
