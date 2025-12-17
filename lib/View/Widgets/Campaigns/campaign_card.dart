@@ -97,7 +97,7 @@ class _CampaignCardState extends State<CampaignCard> {
       _showSuccessDialog('Campaign request cancelled successfully!');
     } else if (mounted) {
       setState(() => _isProcessing = false);
-      _showErrorDialog('Failed to cancel request. Please try again.');
+      _showErrorDialog('Cannot cancel after campaign starts.');
     }
   }
 
@@ -296,7 +296,7 @@ class _CampaignCardState extends State<CampaignCard> {
             borderRadius: BorderRadius.circular(16),
           ),
           title: Text(
-            'Error',
+            'Oops!',
             style: AppTextStyle.base.copyWith(
               fontSize: 18,
               fontWeight: FontWeight.bold,

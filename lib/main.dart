@@ -1,3 +1,5 @@
+import 'package:addrive/Controller/Hompage/activecampain_provider.dart';
+import 'package:addrive/Controller/MyRide/myride.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:addrive/Controller/Login/login_provider.dart';
 import 'package:addrive/Controller/Profile/myprofile.dart';
@@ -37,6 +39,8 @@ void main() async {
         ChangeNotifierProvider(create: (_)=>OtpProvider()),
         ChangeNotifierProvider(create: (_) => ProfileProvider()),
         ChangeNotifierProvider(create: (_) => CampaignsProvider()),
+        ChangeNotifierProvider(create: (_) => ActiveCampaignProvider()),
+        ChangeNotifierProvider(create: (_) => RideProvider()),
       ],
       child: MyApp(),
     ),

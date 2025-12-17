@@ -69,10 +69,6 @@ Future<void> fetchPersonalDetails() async {
       Uri.parse(ApiConfig.personalDetailsUrl),
       headers: {'Authorization': 'Bearer $token'},
     );
-
-
-print(response.body);
-      print('77777777777777777777777777777777777777777777777777777777777777777777777777777777777');
     if (response.statusCode == 200 || response.statusCode == 201) {
       final Map<String, dynamic> data = jsonDecode(response.body);
  

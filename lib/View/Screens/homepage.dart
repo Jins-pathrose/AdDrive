@@ -1,17 +1,30 @@
+import 'package:addrive/Controller/Hompage/activecampain_provider.dart';
+import 'package:addrive/Controller/Profile/myprofile.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
+    // Fetch campaign data when widget loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final campaignProvider = context.read<ActiveCampaignProvider>();
+      campaignProvider.fetchActiveCampaign();
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final personalDetailsProvider = context.read<ProfileProvider>();
+      personalDetailsProvider.fetchProfileData();
+    });
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-         BackgroundDecoration(),
+          BackgroundDecoration(),
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(12.0),
@@ -20,42 +33,56 @@ class HomePage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SizedBox(height: 20),
-                    // Header
+                    // Header (remains same)
                     Padding(
                       padding: const EdgeInsets.only(left: 12, right: 12),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 25, // half of your 50x50 container
-                                backgroundImage: AssetImage(
-                                  'assets/images/Jins_Black.jpg', // replace with your image URL
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                          Consumer<ProfileProvider>(
+                            builder: (context, profileProvider, child) {
+                              final profile =
+                                  profileProvider.profileData?.profile;
+                              return Row(
                                 children: [
-                                  Text(
-                                    'Hello!',
-                                    style: AppTextStyle.base.copyWith(
-                                      fontSize: 12,
-                                      color: Colors.grey[600],
-                                    ),
+                                  CircleAvatar(
+                                    radius: 25,
+                                    backgroundImage:
+                                        (profile?.profilePicture?.isNotEmpty ??
+                                            false)
+                                        ? NetworkImage(profile!.profilePicture)
+                                              as ImageProvider
+                                        : const AssetImage(
+                                            'assets/images/placeholder_avatar.jpg',
+                                          ),
                                   ),
-                                  Text(
-                                    'Pathrose Jinz',
-                                    style: AppTextStyle.base.copyWith(
-                                      fontSize: 17,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
+                                  const SizedBox(width: 12),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Hello!',
+                                        style: AppTextStyle.base.copyWith(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      Text(
+                                        profile?.fullName?.isNotEmpty ?? false
+                                            ? profile!.fullName
+                                            : 'Driver',
+                                        style: AppTextStyle.base.copyWith(
+                                          fontSize: 17,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.black87,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
-                              ),
-                            ],
+                              );
+                            },
                           ),
                           Container(
                             padding: const EdgeInsets.all(8),
@@ -90,20 +117,18 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
 
-                    // Task Card
+                    // Task Card with Campaign Container
                     Container(
                       child: Container(
                         margin: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          // color: Color.fromARGB(255, 235, 235, 235),
                           color: const Color(0xFFB24BF3).withOpacity(0.1),
-
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            // Top Purple Section
+                            // Top Purple Section (remains same)
                             Container(
                               padding: const EdgeInsets.all(18),
                               decoration: const BoxDecoration(
@@ -167,7 +192,7 @@ class HomePage extends StatelessWidget {
                                       ),
                                     ],
                                   ),
-                                  SizedBox(width: 80), // Progress Circle
+                                  SizedBox(width: 80),
                                   SizedBox(
                                     width: 60,
                                     height: 60,
@@ -202,87 +227,32 @@ class HomePage extends StatelessWidget {
                                 ],
                               ),
                             ),
-                            // Bottom White Section
-                            Container(
-                              padding: const EdgeInsets.only(
-                                left: 24,
-                                right: 24,
-                                bottom: 24,
-                                top: 10,
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        colors: [
-                                          Color(0xFFB24BF3),
-                                          Color(0xFF9D4EDD),
-                                        ],
-                                      ),
-                                      borderRadius: BorderRadius.circular(20),
-                                    ),
-                                    child: Text(
-                                      'Current Campaign Details',
-                                      style: AppTextStyle.base.copyWith(
-                                        color: Colors.white,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    'Kalyan Hypermarket',
-                                    style: AppTextStyle.base.copyWith(
-                                      fontSize: 19,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.black87,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 5),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.calendar_today,
-                                        size: 14,
-                                        color: Colors.purple.shade300,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '13 Aug 2025 - 13 Sep 2025',
-                                        style: AppTextStyle.base.copyWith(
-                                          fontSize: 13,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Row(
-                                    children: [
-                                      Icon(
-                                        Icons.directions_car,
-                                        size: 15,
-                                        color: Colors.purple.shade300,
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        '3,500 kms',
-                                        style: AppTextStyle.base.copyWith(
-                                          fontSize: 13,
-                                          color: Colors.black54,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
+
+                            // Campaign Details Container (Updated with Provider)
+                            Consumer<ActiveCampaignProvider>(
+                              builder: (context, campaignProvider, child) {
+                                if (campaignProvider.isLoading) {
+                                  return _buildCampaignLoading();
+                                }
+
+                                if (campaignProvider.error != null) {
+                                  return _buildCampaignError(
+                                    campaignProvider.error!,
+                                  );
+                                }
+
+                                final campaignData =
+                                    campaignProvider.campaignData;
+
+                                if (campaignData == null ||
+                                    campaignData['status'] !=
+                                        'active_campaign') {
+                                  return _buildNoActiveCampaign();
+                                }
+
+                                final campaign = campaignData['campaign'];
+                                return _buildCampaignDetails(campaign);
+                              },
                             ),
                           ],
                         ),
@@ -290,9 +260,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
 
-                    // Current Campaign Details Button
-
-                    // Participants Header
+                    // Participants Header (remains same)
                     Row(
                       children: [
                         Text(
@@ -326,7 +294,7 @@ class HomePage extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
 
-                    // Participant List
+                    // Participant List (remains same)
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Column(
@@ -389,6 +357,196 @@ class HomePage extends StatelessWidget {
     );
   }
 
+  // Campaign Loading Widget
+  Widget _buildCampaignLoading() {
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 10),
+      child: Center(
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFB24BF3)),
+        ),
+      ),
+    );
+  }
+
+  // Campaign Error Widget
+  Widget _buildCampaignError(String error) {
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB24BF3), Color(0xFF9D4EDD)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Current Campaign Details',
+              style: AppTextStyle.base.copyWith(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Column(
+              children: [
+                Icon(Icons.error_outline, color: Colors.red, size: 30),
+                SizedBox(height: 8),
+                Text(
+                  'Failed to load campaign',
+                  style: AppTextStyle.base.copyWith(
+                    fontSize: 14,
+                    color: Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // No Active Campaign Widget
+  Widget _buildNoActiveCampaign() {
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB24BF3), Color(0xFF9D4EDD)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Campaign Status',
+              style: AppTextStyle.base.copyWith(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Center(
+            child: Column(
+              children: [
+                Icon(
+                  Icons.campaign_outlined,
+                  size: 40,
+                  color: Colors.grey[400],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  'No Active Campaign',
+                  style: AppTextStyle.base.copyWith(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Campaign Details Widget
+  Widget _buildCampaignDetails(Map<String, dynamic> campaign) {
+    // Parse and format dates
+    final startDate = DateTime.parse(campaign['start_date']);
+    final endDate = DateTime.parse(campaign['end_date']);
+    final dateFormat = DateFormat('dd MMM yyyy');
+    final formattedStartDate = dateFormat.format(startDate);
+    final formattedEndDate = dateFormat.format(endDate);
+
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24, bottom: 24, top: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Color(0xFFB24BF3), Color(0xFF9D4EDD)],
+              ),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              'Current Campaign Details',
+              style: AppTextStyle.base.copyWith(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            campaign['campaign_name'] ?? 'Campaign',
+            style: AppTextStyle.base.copyWith(
+              fontSize: 19,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Icon(
+                Icons.calendar_today,
+                size: 14,
+                color: Colors.purple.shade300,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '$formattedStartDate - $formattedEndDate',
+                style: AppTextStyle.base.copyWith(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Row(
+            children: [
+              Icon(
+                Icons.directions_car,
+                size: 15,
+                color: Colors.purple.shade300,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '3,500 kms', // Keep this static or update if API provides distance
+                style: AppTextStyle.base.copyWith(
+                  fontSize: 13,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Participant Tile (remains same)
   Widget _buildParticipantTile({
     required int rank,
     required String name,
