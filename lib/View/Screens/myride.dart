@@ -9,11 +9,14 @@ class MyRidePage extends StatelessWidget {
   const MyRidePage({super.key});
 
   @override
+  @override
   Widget build(BuildContext context) {
-    // Initialize location when widget builds
+    // Initialize location and fetch campaign when widget builds
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final rideProvider = context.read<RideProvider>();
       rideProvider.initializeLocation();
+      rideProvider.fetchActiveCampaign(); // Add this line
+      rideProvider.loadRideState();
     });
 
     return Scaffold(
@@ -71,174 +74,183 @@ class MyRidePage extends StatelessWidget {
 
                 // Map Container
                 // Expanded map section
-Expanded(
-  child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16.0),
-    child: Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.3),
-            spreadRadius: 2,
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Stack(
-        children: [
-          // Show map only when location is loaded
-          if (!rideProvider.isLoading && rideProvider.currentLocation != null)
-            FlutterMap(
-              options: MapOptions(
-                initialCenter: rideProvider.currentLocation!,
-                initialZoom: 16.0,
-                interactionOptions: const InteractionOptions(
-                  flags: InteractiveFlag.all,
-                ),
-                onMapReady: () {
-                  // Map is ready
-                },
-              ),
-              children: [
-                TileLayer(
-                  urlTemplate: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                  subdomains: const ['a', 'b', 'c'],
-                  userAgentPackageName: 'com.techfifo.addrive',
-                  tileProvider: NetworkTileProvider(),
-                  tileBuilder: (context, tileWidget, tile) {
-                    return ClipRect(
-                      child: tileWidget,
-                    );
-                  },
-                  errorImage: const NetworkImage('https://via.placeholder.com/256/cccccc/ffffff?text=Map+Tile'),
-                ),
-                // Current Location Marker
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      width: 50.0,
-                      height: 50.0,
-                      point: rideProvider.currentLocation!,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.blue.withOpacity(0.5),
-                              blurRadius: 10,
-                              spreadRadius: 2,
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.3),
+                            spreadRadius: 2,
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        children: [
+                          // Show map only when location is loaded
+                          if (!rideProvider.isLoading &&
+                              rideProvider.currentLocation != null)
+                            FlutterMap(
+                              options: MapOptions(
+                                initialCenter: rideProvider.currentLocation!,
+                                initialZoom: 16.0,
+                                interactionOptions: const InteractionOptions(
+                                  flags: InteractiveFlag.all,
+                                ),
+                                onMapReady: () {
+                                  // Map is ready
+                                },
+                              ),
+                              children: [
+                                TileLayer(
+                                  urlTemplate:
+                                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  subdomains: const ['a', 'b', 'c'],
+                                  userAgentPackageName: 'com.techfifo.addrive',
+                                  tileProvider: NetworkTileProvider(),
+                                  tileBuilder: (context, tileWidget, tile) {
+                                    return ClipRect(child: tileWidget);
+                                  },
+                                  errorImage: const NetworkImage(
+                                    'https://via.placeholder.com/256/cccccc/ffffff?text=Map+Tile',
+                                  ),
+                                ),
+                                // Current Location Marker
+                                MarkerLayer(
+                                  markers: [
+                                    Marker(
+                                      width: 50.0,
+                                      height: 50.0,
+                                      point: rideProvider.currentLocation!,
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.blue.withOpacity(
+                                                0.5,
+                                              ),
+                                              blurRadius: 10,
+                                              spreadRadius: 2,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.location_pin,
+                                          color: Colors.blue,
+                                          size: 40,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Circle around current location
+                                CircleLayer(
+                                  circles: [
+                                    CircleMarker(
+                                      point: rideProvider.currentLocation!,
+                                      radius: 15,
+                                      useRadiusInMeter: false,
+                                      color: Colors.blue.withOpacity(0.2),
+                                      borderColor: Colors.blue.withOpacity(0.5),
+                                      borderStrokeWidth: 2,
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            )
+                          else if (!rideProvider.isLoading &&
+                              rideProvider.currentLocation == null)
+                            // Show error if location failed to load
+                            Container(
+                              color: Colors.white,
+                              child: Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.location_off,
+                                      size: 48,
+                                      color: Colors.grey,
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Unable to get location',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text(
+                                      'Please enable location services',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.location_pin,
-                          color: Colors.blue,
-                          size: 40,
-                        ),
+
+                          // Loading overlay - Show when location is loading OR when map is initializing
+                          if (rideProvider.isLoading ||
+                              rideProvider.currentLocation == null)
+                            Container(
+                              color: Colors.white,
+                              child: const Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    CircularProgressIndicator(
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.blue,
+                                      ),
+                                    ),
+                                    SizedBox(height: 16),
+                                    Text(
+                                      'Getting your location...',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+
+                          // Map controls - Only show when map is loaded
+                          if (!rideProvider.isLoading &&
+                              rideProvider.currentLocation != null)
+                            Positioned(
+                              bottom: 16,
+                              right: 16,
+                              child: FloatingActionButton(
+                                mini: true,
+                                backgroundColor: Colors.white,
+                                onPressed: () {
+                                  // Recenter to current location
+                                  // You'll need to implement this functionality
+                                },
+                                child: const Icon(
+                                  Icons.my_location,
+                                  color: Colors.blue,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                // Circle around current location
-                CircleLayer(
-                  circles: [
-                    CircleMarker(
-                      point: rideProvider.currentLocation!,
-                      radius: 15,
-                      useRadiusInMeter: false,
-                      color: Colors.blue.withOpacity(0.2),
-                      borderColor: Colors.blue.withOpacity(0.5),
-                      borderStrokeWidth: 2,
-                    ),
-                  ],
-                ),
-              ],
-            )
-          else if (!rideProvider.isLoading && rideProvider.currentLocation == null)
-            // Show error if location failed to load
-            Container(
-              color: Colors.white,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.location_off,
-                      size: 48,
-                      color: Colors.grey,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Unable to get location',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Please enable location services',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          
-          // Loading overlay - Show when location is loading OR when map is initializing
-          if (rideProvider.isLoading || rideProvider.currentLocation == null)
-            Container(
-              color: Colors.white,
-              child: const Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      'Getting your location...',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          
-          // Map controls - Only show when map is loaded
-          if (!rideProvider.isLoading && rideProvider.currentLocation != null)
-            Positioned(
-              bottom: 16,
-              right: 16,
-              child: FloatingActionButton(
-                mini: true,
-                backgroundColor: Colors.white,
-                onPressed: () {
-                  // Recenter to current location
-                  // You'll need to implement this functionality
-                },
-                child: const Icon(
-                  Icons.my_location,
-                  color: Colors.blue,
-                ),
-              ),
-            ),
-        ],
-      ),
-    ),
-  ),
-),
 
                 // Ride Info Card
                 Container(
@@ -256,122 +268,271 @@ Expanded(
                       ),
                     ],
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                '28 August 2025',
-                                style: AppTextStyle.base.copyWith(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                '42.6 Kms',
-                                style: AppTextStyle.base.copyWith(
-                                  fontSize: 21,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF5B4AC7),
-                                ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'or 150 kms',
-                                style: AppTextStyle.base.copyWith(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
+                  child: Consumer<RideProvider>(
+                    builder: (context, rideProvider, child) {
+                      // Show loading while fetching campaign
+                      if (rideProvider.isFetchingCampaign) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Color(0xFF5B4AC7),
+                            ),
                           ),
-                          // Kalyan Logo
-                          Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              color: Colors.red,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.white, width: 2),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.grey.withOpacity(0.3),
-                                  spreadRadius: 2,
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 3),
+                        );
+                      }
+
+                      // Show campaign data if available
+                      if (rideProvider.activeCampaign != null) {
+                        final campaign = rideProvider.activeCampaign!;
+
+                        // Format dates
+                        final startDate = _formatDate(campaign.startDate);
+                        final endDate = _formatDate(campaign.endDate);
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      startDate, // Use campaign start date
+                                      style: AppTextStyle.base.copyWith(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      '${campaign.targetKilometers ?? 0} Kms', // Use campaign target
+                                      style: AppTextStyle.base.copyWith(
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.bold,
+                                        color: Color(0xFF5B4AC7),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      campaign.status, // Use campaign status
+                                      style: AppTextStyle.base.copyWith(
+                                        fontSize: 12,
+                                        color: campaign.status == 'Ongoing'
+                                            ? Colors.green
+                                            : Colors.orange,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                // Campaign Logo
+                                Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: Colors.white,
+                                      width: 2,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.grey.withOpacity(0.3),
+                                        spreadRadius: 2,
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 3),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: campaign.campaignProfile != null
+                                        ? Image.network(
+                                            campaign.campaignProfile!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                                  return _buildDefaultCampaignIcon(
+                                                    campaign.campaignName,
+                                                  );
+                                                },
+                                            loadingBuilder:
+                                                (
+                                                  context,
+                                                  child,
+                                                  loadingProgress,
+                                                ) {
+                                                  if (loadingProgress == null)
+                                                    return child;
+                                                  return const Center(
+                                                    child: CircularProgressIndicator(
+                                                      valueColor:
+                                                          AlwaysStoppedAnimation<
+                                                            Color
+                                                          >(Colors.white),
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  );
+                                                },
+                                          )
+                                        : _buildDefaultCampaignIcon(
+                                            campaign.campaignName,
+                                          ),
+                                  ),
                                 ),
                               ],
                             ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(12),
-                              child: Image.asset(
-                                'assets/images/kallyan silks.jpeg',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(
-                                    Icons.bike_scooter,
-                                    color: Colors.white,
-                                    size: 30,
-                                  );
+                            const SizedBox(height: 20),
+                            // Replace the button section with this:
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: () {
+                                  if (rideProvider.isRideActive) {
+                                    // Call pause function
+                                    rideProvider.pauseRide();
+                                  } else {
+                                    // Call start ride function
+                                    _handleStartRide(context, rideProvider);
+                                  }
                                 },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: rideProvider.isRideActive
+                                      ? Colors
+                                            .orange // Color for Pause button
+                                      : const Color(
+                                          0xFF5B4AC7,
+                                        ), // Color for Start button
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Text(
+                                  rideProvider.isRideActive
+                                      ? 'Pause Ride'
+                                      : 'Start a Ride',
+                                  style: AppTextStyle.base.copyWith(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          onPressed: () => _handleStartRide(context, rideProvider),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF5B4AC7),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                            const SizedBox(height: 12),
+                            Center(
+                              child: Text(
+                                'Campaign ends on $endDate', // Use campaign end date
+                                style: AppTextStyle.base.copyWith(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                              ),
                             ),
-                          ),
-                          child: Text(
-                            'Start a Ride',
-                            style: AppTextStyle.base.copyWith(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                            // Show campaign name
+                            const SizedBox(height: 8),
+                            Center(
+                              child: Text(
+                                campaign.campaignName,
+                                style: AppTextStyle.base.copyWith(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: Text(
-                          'The current campaign end on 13.09.2025',
-                          style: AppTextStyle.base.copyWith(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ),
-                      // Show error if any
-                      if (rideProvider.error != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(
-                            rideProvider.error!,
-                            style: AppTextStyle.base.copyWith(
-                              fontSize: 12,
-                              color: Colors.red,
+                            // Show error if any
+                            if (rideProvider.error != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  rideProvider.error!,
+                                  style: AppTextStyle.base.copyWith(
+                                    fontSize: 12,
+                                    color: Colors.red,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                          ],
+                        );
+                      } else {
+                        // No active campaign
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.campaign_outlined,
+                                    size: 40,
+                                    color: Colors.grey[400],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    'No Active Campaign',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    'You are not currently enrolled in any campaign',
+                                    style: AppTextStyle.base.copyWith(
+                                      fontSize: 12,
+                                      color: Colors.grey[500],
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ),
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                    ],
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                onPressed: rideProvider.activeCampaign != null
+                                    ? () => _handleStartRide(
+                                        context,
+                                        rideProvider,
+                                      )
+                                    : null,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      rideProvider.activeCampaign != null
+                                      ? const Color(0xFF5B4AC7)
+                                      : Colors.grey[300],
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 16,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                child: Text(
+                                  'Start a Ride',
+                                  style: AppTextStyle.base.copyWith(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: rideProvider.activeCampaign != null
+                                        ? Colors.white
+                                        : Colors.grey[600],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+                    },
                   ),
                 ),
               ],
@@ -382,54 +543,156 @@ Expanded(
     );
   }
 
-  void _handleStartRide(BuildContext context, RideProvider rideProvider) async {
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Row(
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(width: 20),
-            Text('Checking upload status...'),
-          ],
+  // Add these helper methods to your MyRidePage class
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final day = date.day;
+      final month = _getMonthName(date.month);
+      final year = date.year;
+      return '$day $month $year';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  String _getMonthName(int month) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return months[month - 1];
+  }
+
+  Widget _buildDefaultCampaignIcon(String campaignName) {
+    return Container(
+      color: const Color(0xFF5B4AC7),
+      child: Center(
+        child: Text(
+          campaignName.isNotEmpty ? campaignName[0] : 'C',
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
       ),
     );
-
-    // Check if user can start ride
-    bool canStart = await rideProvider.canStartRide(context);
-
-    // Dismiss loading dialog
-    Navigator.of(context).pop();
-
-    if (canStart) {
-      // Navigate to ImageUploads if submission_status is pending
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => ImageUploads()),
-      );
-    } else {
-      // Show error message
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Cannot Start Ride'),
-          content: Text(
-            rideProvider.weeklyUploadStatus != null
-                ? 'Submission status is: ${rideProvider.weeklyUploadStatus!['submission_status']}. '
-                    'Only "pending" status can start a ride.'
-                : 'Unable to verify upload status. Please try again.',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('OK'),
-            ),
-          ],
-        ),
-      );
-    }
   }
+
+ void _handleStartRide(BuildContext context, RideProvider rideProvider) async {
+  // Check if there's an active campaign
+  if (rideProvider.activeCampaign == null) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('No Active Campaign'),
+        content: Text('You need to be enrolled in a campaign to start a ride.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+    return;
+  }
+  
+  final campaignId = rideProvider.activeCampaign!.id.toString();
+  
+  // Show loading dialog
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      content: Row(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(width: 20),
+          Text('Checking upload status...'),
+        ],
+      ),
+    ),
+  );
+
+  // Check weekly upload status first
+  await rideProvider.checkWeeklyUploadStatus(context, campaignId);
+
+  // Dismiss loading dialog
+  Navigator.of(context).pop();
+
+  // Check has_uploaded_before
+  final hasUploadedBefore = rideProvider.weeklyUploadStatus?['has_uploaded_before'] ?? false;
+  
+  if (!hasUploadedBefore) {
+    // Navigate to ImageUploads
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ImageUploads(campaignId: campaignId)
+      ),
+    );
+    return;
+  }
+
+  // User has uploaded before, continue with ride start
+  // Show loading dialog for ride start
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => AlertDialog(
+      content: Row(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(width: 20),
+          Text('Starting ride...'),
+        ],
+      ),
+    ),
+  );
+
+  // Start ride with tracking
+  bool success = await rideProvider.startRideWithTracking(context, campaignId);
+
+  // Dismiss loading dialog
+  Navigator.of(context).pop();
+
+  if (success && rideProvider.isRideActive) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Ride started successfully!'),
+        backgroundColor: Colors.green,
+        duration: Duration(seconds: 2),
+      ),
+    );
+  } else {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Failed to Start Ride'),
+        content: Text(
+          rideProvider.error ?? 
+          'Unable to start ride. Please try again.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+}
 }

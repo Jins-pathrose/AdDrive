@@ -5,6 +5,7 @@ class ActivecampaignModel {
   final String endDate;
   final String status;
   final String? campaignProfile;
+  final int? targetKilometers; // Add this field
 
   ActivecampaignModel({
     required this.id,
@@ -13,6 +14,7 @@ class ActivecampaignModel {
     required this.endDate,
     required this.status,
     this.campaignProfile,
+    this.targetKilometers, // Add this
   });
 
   factory ActivecampaignModel.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class ActivecampaignModel {
       endDate: json['end_date'],
       status: json['status'],
       campaignProfile: json['campaign_profile'],
+      targetKilometers: json['target_kilometers'], // Add this
     );
   }
 }

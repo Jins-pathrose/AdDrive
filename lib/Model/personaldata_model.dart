@@ -30,7 +30,7 @@ class Profile {
     return Profile(
       id: json['id'] ?? 0,
       firstName: json['first_name'] ?? '',
-      lastName: json['last_name'] ?? '',
+      lastName: json['last_name'] ?? '', 
       email: json['email'] ?? '',
       phoneNumber: json['phone_number'] ?? '',
       profilePicture: json['profile_picture'] ?? '',

@@ -1,6 +1,7 @@
 // widgets/campaigns_list.dart
 import 'package:addrive/Controller/campaigns_tab.dart';
 import 'package:addrive/Model/campaigns_model.dart';
+import 'package:addrive/View/Widgets/Campaigns/fleetcampaign_card.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -24,34 +25,61 @@ class CampaignsList extends StatelessWidget {
     required this.rootContext,
   });
 
-  @override
-  Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+  // In CampaignsList widget build method, replace with:
+@override
+Widget build(BuildContext context) {
+  final campaignsProvider = Provider.of<CampaignsProvider>(context, listen: true);
+  
+  if (campaignsProvider.isLoading) {
+    return const Center(
+      child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
+    );
+  }
+
+  if (campaignsProvider.error != null) {
+    return _buildErrorState();
+  }
+
+  // Check if driver is fleet and show fleet campaigns
+  if (campaignsProvider.isFleetDriver) {
+    final fleetCampaigns = campaignsProvider.fleetCampaigns;
+    
+    if (fleetCampaigns.isEmpty) {
+      return Center(
+        child: Text(
+          'No fleet campaigns available',
+          style: const TextStyle(fontSize: 16, color: Colors.grey),
+        ),
       );
-    }
-
-    if (error != null) {
-      return _buildErrorState();
-    }
-
-    if (campaigns.isEmpty) {
-      return _buildEmptyState();
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: campaigns.length,
+      itemCount: fleetCampaigns.length,
       itemBuilder: (context, index) {
-        final campaign = campaigns[index];
-        return CampaignCard(
-          campaign: campaign,
-          onJoinPressed: () => _handleJoinCampaign(context, campaign),
-        );
+        final campaign = fleetCampaigns[index];
+        return FleetCampaignCard(campaign: campaign);
       },
     );
   }
+
+  // Original logic for non-fleet drivers
+  if (campaigns.isEmpty) {
+    return _buildEmptyState();
+  }
+
+  return ListView.builder(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    itemCount: campaigns.length,
+    itemBuilder: (context, index) {
+      final campaign = campaigns[index];
+      return CampaignCard(
+        campaign: campaign,
+        onJoinPressed: () => _handleJoinCampaign(context, campaign),
+      );
+    },
+  );
+}
 
   Widget _buildErrorState() {
     return Center(
