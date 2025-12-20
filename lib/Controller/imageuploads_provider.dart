@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:developer';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -210,14 +211,13 @@ class ImageUploadProvider with ChangeNotifier {
           filename: 'right_${DateTime.now().millisecondsSinceEpoch}.jpg',
         ));
       }
-
       // Send request
       final streamedResponse = await request.send();
       final response = await http.Response.fromStream(streamedResponse);
       
       final responseData = json.decode(response.body);
       print('Upload Response: $responseData');
-      
+      print(response.statusCode);
       if (response.statusCode == 200 || response.statusCode == 201) {
         _isSuccess = true;
         
@@ -235,10 +235,13 @@ class ImageUploadProvider with ChangeNotifier {
       } else {
         throw Exception('Upload failed: ${response.statusCode} - ${responseData['message'] ?? 'Unknown error'}');
       }
+            print(response.statusCode);
+
       
     } catch (e) {
       _error = e.toString();
       print('Upload error: $e');
+      print(error);
       
     } finally {
       _isSubmitting = false;

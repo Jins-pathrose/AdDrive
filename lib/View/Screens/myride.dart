@@ -9,7 +9,6 @@ class MyRidePage extends StatelessWidget {
   const MyRidePage({super.key});
 
   @override
-  @override
   Widget build(BuildContext context) {
     // Initialize location and fetch campaign when widget builds
     WidgetsBinding.instance.addPostFrameCallback((_) {

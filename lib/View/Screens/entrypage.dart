@@ -1,13 +1,73 @@
+import 'package:addrive/Controller/Login/entrypage_provider.dart';
+import 'package:addrive/View/BottomNavigator/bottomnavigator.dart';
 import 'package:addrive/View/Screens/loginpage.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:provider/provider.dart';
 
 class AdDriveWelcomeScreen extends StatelessWidget {
   const AdDriveWelcomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<EntryPageProvider>(context, listen: true);
+    
+    // Check token validity when screen builds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (provider.isCheckingToken) {
+        _checkTokenAndNavigate(context, provider);
+      }
+    });
+
+    // Show loading overlay while checking token
+    if (provider.isCheckingToken) {
+      return _buildLoadingScreen();
+    }
+
+    return _buildWelcomeScreen(context);
+  }
+
+  Future<void> _checkTokenAndNavigate(
+    BuildContext context, 
+    EntryPageProvider provider
+  ) async {
+    final hasValidToken = await provider.checkAndValidateToken();
+    
+    if (hasValidToken) {
+      // Navigate to BottomNavigator if token is valid
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (context) => BottomNavigator()),
+      );
+    }
+    // If no valid token, just show the welcome screen (provider.isCheckingToken is now false)
+  }
+
+  Widget _buildLoadingScreen() {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF6C3FE4)),
+            ),
+            SizedBox(height: 20),
+            Text(
+              'Wait a moment...',
+              style: AppTextStyle.base.copyWith(
+                fontSize: 16,
+                color: Colors.black54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWelcomeScreen(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -23,7 +83,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                     Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
+                    Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
                     Color(0xFFE0F7FA).withOpacity(0.0),
                   ],
                 ),
@@ -40,7 +100,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                     Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
+                    Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
                     Color(0xFFE0F7FA).withOpacity(0.0),
                   ],
                 ),
@@ -57,7 +117,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                      Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
+                    Color.fromARGB(255, 124, 223, 236).withOpacity(0.6),
                     Color(0xFFE0F7FA).withOpacity(0.0),
                   ],
                 ),
@@ -109,7 +169,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:  Colors.yellow,
+                color: Colors.yellow,
               ),
             ),
           ),
@@ -121,7 +181,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
               height: 8,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color:  const Color.fromARGB(255, 244, 158, 248),
+                color: const Color.fromARGB(255, 244, 158, 248),
               ),
             ),
           ),
@@ -134,7 +194,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: Image.asset(
-                    'assets/images/e6050dd6dc94d49bbfaae0d8d8dfabe89ab07961.png', // Replace with your car image path
+                    'assets/images/e6050dd6dc94d49bbfaae0d8d8dfabe89ab07961.png',
                     height: 300,
                     fit: BoxFit.contain,
                   ),
@@ -181,7 +241,12 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                     height: 56,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(context, MaterialPageRoute(builder: (context) =>  LoginScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => LoginScreen(),
+                          ),
+                        );
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFF6C3FE4),
@@ -191,7 +256,7 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                         elevation: 0,
                       ),
                       child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             "Let's Start",
@@ -202,7 +267,11 @@ class AdDriveWelcomeScreen extends StatelessWidget {
                             ),
                           ),
                           SizedBox(width: 8),
-                          Icon(LucideIcons.arrowRight, size: 24, color: const Color.fromARGB(255, 255, 255, 255))
+                          Icon(
+                            LucideIcons.arrowRight,
+                            size: 24,
+                            color: const Color.fromARGB(255, 255, 255, 255),
+                          )
                         ],
                       ),
                     ),
