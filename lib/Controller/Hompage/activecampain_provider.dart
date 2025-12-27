@@ -1,10 +1,9 @@
+import 'package:addrive/Model/apiclient.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
-class ActiveCampaignProvider with ChangeNotifier {
+class ActiveCampaignProvider with ChangeNotifier{
+  final ApiClient api = ApiClient();
   Map<String, dynamic>? _campaignData;
   bool _isLoading = false;
   String? _error;
@@ -14,36 +13,29 @@ class ActiveCampaignProvider with ChangeNotifier {
   String? get error => _error;
 
   Future<void> fetchActiveCampaign() async {
-    _isLoading = true;
-    notifyListeners();
+  _isLoading = true;
+  notifyListeners();
 
-    try {
-       final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('access_token');
-      final response = await http.get(
-        Uri.parse('https://addrive.kkms.co.in/api/driver/active-campaign/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+  try {
+    final response = await api.get(
+      'https://addrive.kkms.co.in/api/driver/active-campaign/',
+    );
 
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        _campaignData = data;
-        _error = null;
-      } else {
-        _error = 'Failed to load campaign data';
-        _campaignData = null;
-      }
-    } catch (e) {
-      _error = 'Error: $e';
+    if (response.statusCode == 200) {
+      _campaignData = jsonDecode(response.body);
+      _error = null;
+    } else {
+      _error = 'Failed (${response.statusCode})';
       _campaignData = null;
-    } finally {
-      _isLoading = false;
-      notifyListeners();
     }
+  } catch (e) {
+    _error = 'Error: $e';
+    _campaignData = null;
+  } finally {
+    _isLoading = false;
+    notifyListeners();
   }
+}
 
   void clearCampaignData() {
     _campaignData = null;

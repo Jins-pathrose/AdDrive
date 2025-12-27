@@ -436,7 +436,7 @@ if (value.length != 10) return 'Phone number must be exactly 10 digits';
                                                   ScaffoldMessenger.of(context).showSnackBar(
                                                     SnackBar(
                                                       content: Text(
-                                                        registerProvider.errorMessage ?? "Registration Failed",
+                                                        "Mobile number or email already registered",
                                                       ),
                                                       backgroundColor: Colors.red,
                                                     ),
@@ -446,7 +446,7 @@ if (value.length != 10) return 'Phone number must be exactly 10 digits';
                                                 // Form is invalid, show error message
                                                 ScaffoldMessenger.of(context).showSnackBar(
                                                   SnackBar(
-                                                    content: Text("Please fix the errors in the form"),
+                                                    content: Text("Please fix the mistakes in the form"),
                                                     backgroundColor: Colors.red,
                                                   ),
                                                 );

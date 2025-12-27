@@ -82,7 +82,7 @@ class _PersonalDetailsBody extends StatelessWidget {
                             right: 0,
                             child: GestureDetector(
                               onTap: () async {
-                                // TODO: open image picker & upload → set prov.profilePictureUrl
+                                // await prov.pickImage();
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(4),

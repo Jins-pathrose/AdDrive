@@ -34,10 +34,17 @@ class EntryPageProvider with ChangeNotifier {
         return true;
       } else {
         // Token is invalid or expired, try to refresh
-        final newToken = await _refreshAccessToken(refreshToken);
+        final refreshResult = await _refreshAccessToken(refreshToken);
         
-        if (newToken != null) {
-          await prefs.setString('access_token', newToken);
+        if (refreshResult != null && refreshResult['access'] != null) {
+          // Save both new tokens
+          await prefs.setString('access_token', refreshResult['access']!);
+          
+          // Also save the new refresh token if provided
+          if (refreshResult['refresh'] != null) {
+            await prefs.setString('refresh_token', refreshResult['refresh']!);
+          }
+          
           _isCheckingToken = false;
           notifyListeners();
           return true;
@@ -76,9 +83,11 @@ class EntryPageProvider with ChangeNotifier {
       return false;
     }
   }
-  
+
   // Refresh access token using refresh token
-  Future<String?> _refreshAccessToken(String refreshToken) async {
+  // Returns a map with 'access' and 'refresh' tokens or null if failed
+  
+  Future<Map<String, String>?> _refreshAccessToken(String refreshToken) async {
     try {
       final response = await http.post(
         Uri.parse('https://addrive.kkms.co.in/api/token/refresh/'),
@@ -91,9 +100,21 @@ class EntryPageProvider with ChangeNotifier {
       );
       
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return data['access'] as String?;
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        
+        final accessToken = data['access'] as String?;
+        final refreshToken = data['refresh'] as String?;
+        
+        if (accessToken != null) {
+          return {
+            'access': accessToken,
+            if (refreshToken != null) 'refresh': refreshToken,
+          };
+        }
+        return null;
       } else {
+        print('Token refresh failed with status: ${response.statusCode}');
+        print('Response: ${response.body}');
         return null;
       }
     } catch (e) {

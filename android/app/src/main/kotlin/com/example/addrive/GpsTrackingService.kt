@@ -86,13 +86,14 @@ class GpsTrackingService : Service() {
             put("trip_id", tripId)
             put("latitude", location.latitude)
             put("longitude", location.longitude)
-            put("access_token", token)
         }
 
         Log.d(TAG, "🌐 Sending API request")
 
         val request = Request.Builder()
-            .url("http://192.168.1.48:3000/gps/update")
+            .url("https://backend.drarifdentistry.com/gps/update")
+            .addHeader("Authorization", "Bearer $token") // ✅ IMPORTANT
+            .addHeader("Content-Type", "application/json")
             .post(json.toString().toRequestBody("application/json".toMediaType()))
             .build()
 

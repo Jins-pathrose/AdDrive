@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:addrive/Model/apiclient.dart';
 import 'package:addrive/Model/apiconfig.dart';
 import 'package:addrive/Model/profiledata_model.dart';
 import 'package:flutter/foundation.dart';
@@ -7,6 +8,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ProfileProvider with ChangeNotifier {
+  final ApiClient api = ApiClient();
   ProfileData? _profileData;
   bool _isLoading = false;
   String _error = '';
@@ -14,7 +16,7 @@ class ProfileProvider with ChangeNotifier {
   ProfileData? get profileData => _profileData;
   bool get isLoading => _isLoading;
   String get error => _error;
-  
+
   Future<void> fetchProfileData() async {
     _isLoading = true;
     _error = '';
@@ -24,7 +26,7 @@ class ProfileProvider with ChangeNotifier {
       // Get access token from SharedPreferences
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString('access_token');
-      
+
       if (token == null) {
         _error = 'No access token found. Please login again.';
         _isLoading = false;
@@ -32,13 +34,7 @@ class ProfileProvider with ChangeNotifier {
         return;
       }
 
-      final response = await http.get(
-        Uri.parse(ApiConfig.fullDetailsUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await api.get(ApiConfig.fullDetailsUrl);
 
       if (response.statusCode == 200) {
         final Map<String, dynamic> data = json.decode(response.body);
@@ -97,27 +93,27 @@ class ProfileProvider with ChangeNotifier {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('access_token');
   }
-  
+
   // In ProfileProvider class
-Future<void> logout() async {
-  try {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('payment_option');
-    // Clear any other user-related data
-    await prefs.clear(); // Optional: Clear all stored data
-    
-    // Reset provider state
-    _profileData = null;
-    _error = '';
-    notifyListeners();
-  } catch (e) {
-    // Even if there's an error, we still clear tokens and redirect
-    debugPrint('Logout error: $e');
-    // Force clear tokens regardless of error
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('access_token');
-    await prefs.remove('payment_option');
+  Future<void> logout() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('access_token');
+      await prefs.remove('payment_option');
+      // Clear any other user-related data
+      await prefs.clear(); // Optional: Clear all stored data
+
+      // Reset provider state
+      _profileData = null;
+      _error = '';
+      notifyListeners();
+    } catch (e) {
+      // Even if there's an error, we still clear tokens and redirect
+      debugPrint('Logout error: $e');
+      // Force clear tokens regardless of error
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('access_token');
+      await prefs.remove('payment_option');
+    }
   }
-}
 }

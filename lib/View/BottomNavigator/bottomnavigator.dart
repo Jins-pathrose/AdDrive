@@ -8,14 +8,22 @@ import 'package:addrive/View/Screens/profile.dart';
 import 'package:flutter/material.dart';
 
 class BottomNavigator extends StatefulWidget {
-  const BottomNavigator({super.key});
+  final int initialIndex;
+  
+  const BottomNavigator({super.key, this.initialIndex = 0});
 
   @override
   State<BottomNavigator> createState() => _BottomNavigatorState();
 }
 
 class _BottomNavigatorState extends State<BottomNavigator> {
-  int _selectedIndex = 0;
+  late int _selectedIndex;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedIndex = widget.initialIndex;
+  }
 
   // List of pages for each bottom navigation item
   final List<Widget> _pages = [

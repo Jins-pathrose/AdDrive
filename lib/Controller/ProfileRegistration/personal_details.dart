@@ -1,15 +1,19 @@
 // Controller/ProfileRegistration/personal_details.dart
 import 'dart:io';
 
+import 'package:addrive/Model/apiclient.dart';
 import 'package:addrive/Model/apiconfig.dart';
 import 'package:addrive/Model/fleetmodel.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 
 class PersonalDetailsProvider extends ChangeNotifier {
+    final ApiClient api = ApiClient();
+
   int selectindex = 0;               // 0 = self, 1 = fleet
   bool isLoading = true;
   bool isSaving = false;
@@ -20,7 +24,6 @@ class PersonalDetailsProvider extends ChangeNotifier {
   // ---- data that comes from the server ----
   String firstName = '';
   String lastName = '';
-  String profilePictureUrl = ''; 
   String phone = '';  
   String email = '';              
   String address = '';
@@ -34,7 +37,22 @@ class PersonalDetailsProvider extends ChangeNotifier {
   // local controllers
   final TextEditingController phoneCtrl = TextEditingController();
   final TextEditingController addressCtrl = TextEditingController();
+  
+// Add these fields to your class
+File? _profilePictureFile;
+String profilePictureUrl = ''; // Keep this for server URL
 
+// Add getter for the file
+File? get profilePictureFile => _profilePictureFile;
+
+// Add a method to set profile picture from file
+void setProfilePictureFromFile(File? file) {
+  _profilePictureFile = file;
+  if (file != null) {
+    profilePictureUrl = file.path; // Use file path temporarily
+  }
+  notifyListeners();
+}
   // -------------------------------------------------
    void setTab(int index) {
     selectindex = index;
@@ -62,13 +80,10 @@ Future<void> fetchPersonalDetails() async {
   notifyListeners();
 
   try {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('access_token') ?? 'your_token_here';
-    
-    final response = await http.get(
-      Uri.parse(ApiConfig.personalDetailsUrl),
-      headers: {'Authorization': 'Bearer $token'},
+    final response = await api.get(
+      ApiConfig.personalDetailsUrl
     );
+    
     if (response.statusCode == 200 || response.statusCode == 201) {
       final Map<String, dynamic> data = jsonDecode(response.body);
  
@@ -76,15 +91,17 @@ Future<void> fetchPersonalDetails() async {
       lastName          = data['last_name'] ?? '';
       phone             = data['phone_number'] ?? '';
       email             = data['email'] ?? '';
-      profilePictureUrl = data['profile_picture'] ?? '';
+      profilePictureUrl = data['profile_picture'] ?? ''; // This is server URL
       paymentOption     = data['payment_option'] ?? 'self';
       address           = data['address'] ?? '';
       gender            = data['gender'] ?? '';
 
+      // Clear any local file when fetching from server
+      _profilePictureFile = null;
+      
       // Set phone number in controller
       phoneCtrl.text = phone;
       addressCtrl.text = address;
-      
       
       // FIX: Properly set selected gender - capitalize first letter to match dropdown
       if (gender.isNotEmpty) {
@@ -102,7 +119,70 @@ Future<void> fetchPersonalDetails() async {
     notifyListeners();
   }
 }
-
+// Add this method to compress profile picture
+Future<File?> _compressProfilePicture(File originalImage) async {
+  try {
+    final originalSize = await originalImage.length();
+    print("Original profile picture size: ${originalSize / 1024} KB");
+    
+    // If image is already below 1MB, return as is
+    if (originalSize <= 1024 * 1024) {
+      print("Profile picture already below 1MB, skipping compression");
+      return originalImage;
+    }
+    
+    // Get file path
+    final filePath = originalImage.path;
+    
+    // Create compressed file path
+    final lastIndex = filePath.lastIndexOf(RegExp(r'.jp|.png'));
+    final splitted = filePath.substring(0, lastIndex);
+    final outPath = "${splitted}_compressed_profile${filePath.substring(lastIndex)}";
+    
+    // Determine compression quality
+    int quality = 85;
+    File? compressedFile;
+    
+    // Try multiple compression levels if needed
+    while (quality >= 20) {
+      var result = await FlutterImageCompress.compressAndGetFile(
+        filePath,
+        outPath,
+        quality: quality,
+        minWidth: 800,  // Max width 800px (good for profile pictures)
+        minHeight: 800, // Max height 800px
+        rotate: 0,      // Maintain orientation
+      );
+      
+      if (result != null) {
+        compressedFile = File(result.path);
+        final compressedSize = await compressedFile.length();
+        print("Compressed profile picture size with quality $quality: ${compressedSize / 1024} KB");
+        
+        // If file is below 1MB, we're good
+        if (compressedSize <= 1024 * 1024) {
+          print("Profile picture compressed to below 1MB with quality: $quality%");
+          return compressedFile;
+        }
+      }
+      
+      // Reduce quality for next attempt
+      quality -= 15;
+    }
+    
+    // If we still didn't get below 1MB, use the smallest we got
+    if (compressedFile != null) {
+      print("Using smallest compressed profile picture available");
+      return compressedFile;
+    }
+    
+    return originalImage;
+    
+  } catch (e) {
+    print("Error compressing profile picture: $e");
+    return originalImage; // Return original if compression fails
+  }
+}
   Future<void> fetchFleets() async {
     isLoadingFleets = true;
     notifyListeners();
@@ -140,9 +220,10 @@ Future<void> fetchPersonalDetails() async {
   Future<bool> saveProfileDetails() async {
   isSaving = true;
   notifyListeners();
-  // In saveProfileDetails method, after successful save:
-final prefs = await SharedPreferences.getInstance();
-await prefs.setInt('payment_option', selectindex);
+  
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setInt('payment_option', selectindex);
+  
   try {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('access_token');
@@ -173,34 +254,72 @@ await prefs.setInt('payment_option', selectindex);
     request.fields['address'] = addressCtrl.text.trim();
     request.fields['gender'] = (selectedGender ?? '').toLowerCase();
     request.fields['payment_option'] = paymentOption;
-// Add fleet ID if fleet is selected
-      if (selectindex == 1 && selectedFleet != null) {
-        request.fields['fleet'] = selectedFleet!.id.toString();
-      }
-    // FIXED: Handle profile picture properly
-    if (profilePictureUrl.isNotEmpty) {
-      if (profilePictureUrl.startsWith('/') && 
-          !profilePictureUrl.startsWith('/media/') && 
-          await File(profilePictureUrl).exists()) {
-        // This is a valid local file that exists - upload it
+    
+    // Add fleet ID if fleet is selected
+    if (selectindex == 1 && selectedFleet != null) {
+      request.fields['fleet'] = selectedFleet!.id.toString();
+    }
+
+    // Handle profile picture with compression
+    if (_profilePictureFile != null) {
+      try {
+        // Compress the profile picture before uploading
+        final compressedImage = await _compressProfilePicture(_profilePictureFile!);
+        
+        if (compressedImage != null) {
+          // Check final size after compression
+          final finalSize = await compressedImage.length();
+          debugPrint('Final profile picture size: ${finalSize / 1024} KB');
+          
+          // If still above 1MB after compression, show warning but continue
+          if (finalSize > 1024 * 1024) {
+            debugPrint('Warning: Profile picture still above 1MB after compression');
+          }
+          
+          // Add the compressed image to request
+          request.files.add(await http.MultipartFile.fromPath(
+            'profile_picture',
+            compressedImage.path,
+          ));
+          debugPrint('Uploading compressed profile picture: ${compressedImage.path}');
+        } else {
+          // If compression fails, use original image
+          debugPrint('Failed to compress profile picture, using original');
+          request.files.add(await http.MultipartFile.fromPath(
+            'profile_picture',
+            _profilePictureFile!.path,
+          ));
+        }
+      } catch (e) {
+        debugPrint('Error compressing profile picture: $e, using original');
+        // If compression fails, use original image
         request.files.add(await http.MultipartFile.fromPath(
           'profile_picture',
-          profilePictureUrl,
+          _profilePictureFile!.path,
         ));
-        debugPrint('Uploading local profile picture: $profilePictureUrl');
-      } else if (profilePictureUrl.startsWith('http') || profilePictureUrl.startsWith('/media/')) {
-        // This is already on server - DO NOT include it in the request
-        // The server should keep the existing image
-        debugPrint('Profile picture already on server, not sending in request');
-        // Don't add any profile_picture field or file
-      } else {
-        debugPrint('Invalid profile picture path, not sending any image');
-        // Don't add any profile_picture field or file
+      }
+    } else if (profilePictureUrl.isNotEmpty && 
+               !profilePictureUrl.startsWith('http') && 
+               !profilePictureUrl.startsWith('/media/')) {
+      // This is a local file path that we should upload
+      final localFile = File(profilePictureUrl);
+      if (await localFile.exists()) {
+        try {
+          // Compress the local file
+          final compressedImage = await _compressProfilePicture(localFile);
+          if (compressedImage != null) {
+            request.files.add(await http.MultipartFile.fromPath(
+              'profile_picture',
+              compressedImage.path,
+            ));
+          }
+        } catch (e) {
+          debugPrint('Error processing local profile picture: $e');
+        }
       }
     } else {
-      // No profile picture - explicitly set to null/empty if API requires it
-      // request.fields['profile_picture'] = ''; // Only if API requires this
-      debugPrint('No profile picture specified');
+      // No new profile picture - server will keep existing one
+      debugPrint('No new profile picture specified, keeping existing');
     }
 
     debugPrint('Sending request...');
@@ -214,6 +333,15 @@ await prefs.setInt('payment_option', selectindex);
     notifyListeners();
 
     if (response.statusCode == 200 || response.statusCode == 201) {
+      final responseData = jsonDecode(respStr);
+      
+      // Update profile picture URL from response if available
+      if (responseData.containsKey('profile_picture')) {
+        profilePictureUrl = responseData['profile_picture'] ?? profilePictureUrl;
+        // Clear local file after successful upload
+        _profilePictureFile = null;
+      }
+      
       debugPrint('Save successful!');
       return true;
     } else {
@@ -228,7 +356,37 @@ await prefs.setInt('payment_option', selectindex);
     return false;
   }
 }
+// Add this method to clear profile picture
+void clearProfilePicture() {
+  _profilePictureFile = null;
+  profilePictureUrl = '';
+  notifyListeners();
+}
+// Add this method to validate profile picture
+String? validateProfilePicture() {
+  if (_profilePictureFile != null) {
+    // Check file size (max 1MB)
+    try {
+      final fileSize = _profilePictureFile!.lengthSync();
+      if (fileSize > 1 * 1024 * 1024) {
+        return 'Profile picture should be less than 1MB (will be compressed automatically)';
+      }
+    } catch (e) {
+      // Ignore size check if file doesn't exist
+    }
 
+    // Check file extension
+    final fileName = _profilePictureFile!.path.split('/').last;
+    final extension = fileName.split('.').last.toLowerCase();
+    final allowedExtensions = ['jpg', 'jpeg', 'png'];
+    
+    if (!allowedExtensions.contains(extension)) {
+      return 'Please select a valid image (JPG, JPEG, PNG)';
+    }
+  }
+  
+  return null;
+}
   // ---------- validation ----------
     bool get canProceed =>
       firstName.isNotEmpty &&

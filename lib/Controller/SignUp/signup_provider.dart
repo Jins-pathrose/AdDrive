@@ -2,8 +2,8 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:addrive/Model/apiconfig.dart';
-import 'package:addrive/View/Screens/ProfileRegistration/personaldetails.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart'; // Add this import
@@ -28,29 +28,92 @@ class RegisterProvider with ChangeNotifier {
   }
 
   // Validation method for image
-  String? validateImage() {
-    if (_imageFile == null) {
-      print("Validating image: $_imageFile"); // DEBUG
-      return 'Please select a profile picture';
-    }
-
-    // Check file size (max 5MB)
-    if (_imageFile!.lengthSync() > 5 * 1024 * 1024) {
-      return 'Image size should be less than 5MB';
-    }
-
-    // Check file extension
-    final fileName = _imageFile!.path.split('/').last;
-    final extension = fileName.split('.').last.toLowerCase();
-    final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
-
-    if (!allowedExtensions.contains(extension)) {
-      return 'Please select a valid image (JPG, JPEG, PNG, GIF, BMP)';
-    }
-
-    return null;
+  // Update the validateImage method
+String? validateImage() {
+  if (_imageFile == null) {
+    print("Validating image: $_imageFile"); // DEBUG
+    return 'Please select a profile picture';
   }
 
+  // Check file size (max 1MB - updated from 5MB)
+  if (_imageFile!.lengthSync() > 1 * 1024 * 1024) {
+    return 'Image size should be less than 1MB (will be compressed automatically)';
+  }
+
+  // Check file extension
+  final fileName = _imageFile!.path.split('/').last;
+  final extension = fileName.split('.').last.toLowerCase();
+  final allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp'];
+
+  if (!allowedExtensions.contains(extension)) {
+    return 'Please select a valid image (JPG, JPEG, PNG, GIF, BMP)';
+  }
+
+  return null;
+}
+// Add this method to compress image
+Future<File?> _compressImage(File originalImage) async {
+  try {
+    final originalSize = await originalImage.length();
+    print("Original image size: ${originalSize / 1024} KB");
+    
+    // If image is already below 1MB, return as is
+    if (originalSize <= 1024 * 1024) {
+      print("Image already below 1MB, skipping compression");
+      return originalImage;
+    }
+    
+    // Get file path
+    final filePath = originalImage.path;
+    
+    // Create compressed file path
+    final lastIndex = filePath.lastIndexOf(RegExp(r'.jp|.png'));
+    final splitted = filePath.substring(0, lastIndex);
+    final outPath = "${splitted}_out${filePath.substring(lastIndex)}";
+    
+    // Determine compression quality (starting with 85% and adjust)
+    int quality = 85;
+    File? compressedFile;
+    
+    // Try multiple compression levels if needed
+    while (quality >= 20) {
+      var result = await FlutterImageCompress.compressAndGetFile(
+        filePath,
+        outPath,
+        quality: quality,
+        minWidth: 1024,  // Max width 1024px
+        minHeight: 1024, // Max height 1024px
+      );
+      
+      if (result != null) {
+        compressedFile = File(result.path);
+        final compressedSize = await compressedFile.length();
+        print("Compressed size with quality $quality: ${compressedSize / 1024} KB");
+        
+        // If file is below 1MB, we're good
+        if (compressedSize <= 1024 * 1024) {
+          print("Image compressed to below 1MB with quality: $quality%");
+          return compressedFile;
+        }
+      }
+      
+      // Reduce quality for next attempt
+      quality -= 15;
+    }
+    
+    // If we still didn't get below 1MB, use the smallest we got
+    if (compressedFile != null) {
+      print("Using smallest compressed version available");
+      return compressedFile;
+    }
+    
+    return originalImage;
+    
+  } catch (e) {
+    print("Error compressing image: $e");
+    return originalImage; // Return original if compression fails
+  }
+}
   // Save tokens to SharedPreferences
   Future<void> _saveTokensToStorage() async {
     try {
@@ -134,12 +197,25 @@ class RegisterProvider with ChangeNotifier {
 
     // Add image file if exists
     if (_imageFile != null) {
-      final fileName = _imageFile!.path.split('/').last;
+      // Compress the image before uploading
+      final compressedImage = await _compressImage(_imageFile!);
+      final fileName = compressedImage!.path.split('/').last;
       final extension = fileName.split('.').last.toLowerCase();
+      
+      // Check final size after compression
+      final finalSize = await compressedImage.length();
+      print("Final image size after compression: ${finalSize / 1024} KB");
+      
+      if (finalSize > 1024 * 1024) {
+        _errorMessage = 'Failed to compress image below 1MB. Please select a smaller image.';
+        isLoading = false;
+        notifyListeners();
+        return false;
+      }
 
       final multipartFile = await http.MultipartFile.fromPath(
         'profile_picture',
-        _imageFile!.path,
+        compressedImage.path,
         contentType: MediaType('image', extension),
         filename: fileName,
       );

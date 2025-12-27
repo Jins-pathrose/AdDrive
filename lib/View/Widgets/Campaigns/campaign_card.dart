@@ -465,7 +465,7 @@ class _CampaignCardState extends State<CampaignCard> {
             const Icon(
               Icons.route,
               size: 14,
-              color: Color(0xFF6CCE7),
+              color: Color(0xFF6C5CE7),
             ),
             const SizedBox(width: 6),
             Text(

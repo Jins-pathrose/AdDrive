@@ -1,4 +1,5 @@
 import 'package:addrive/Model/activecampaign_model.dart';
+import 'package:addrive/Model/apiclient.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +10,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class RideProvider with ChangeNotifier {
+  final ApiClient api = ApiClient();
   static const MethodChannel _gpsChannel = MethodChannel('gps_service');
 
   LatLng? _currentLocation;
@@ -155,7 +157,7 @@ class RideProvider with ChangeNotifier {
         // Call API to pause/end the trip
         final response = await http.post(
           Uri.parse(
-            'http://192.168.1.48:3000/gps/pause',
+            'https://backend.drarifdentistry.com/gps/pause',
           ), // Update with your endpoint
           headers: {
             'Content-Type': 'application/json',
@@ -274,7 +276,7 @@ class RideProvider with ChangeNotifier {
       print('Latitude: $latitude, Longitude: $longitude');
 
       // Try different endpoint variations
-      final endpoints = ['http://192.168.1.48:3000/gps/update'];
+      final endpoints = ['https://backend.drarifdentistry.com/gps/update'];
 
       for (String endpoint in endpoints) {
         try {
@@ -445,6 +447,7 @@ class RideProvider with ChangeNotifier {
   }
 
   Future<void> fetchActiveCampaign() async {
+
     _isFetchingCampaign = true;
     _error = null;
     notifyListeners();
@@ -458,13 +461,9 @@ class RideProvider with ChangeNotifier {
         return;
       }
 
-      final response = await http.get(
-        Uri.parse('https://addrive.kkms.co.in/api/driver/active-campaign/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await api.get(
+      'https://addrive.kkms.co.in/api/driver/active-campaign/',
+    );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -473,7 +472,9 @@ class RideProvider with ChangeNotifier {
         } else {
           _activeCampaign = null;
         }
-      } else {
+      }
+      
+       else {
         _error = 'Failed to fetch campaign: ${response.statusCode}';
       }
     } catch (e) {
