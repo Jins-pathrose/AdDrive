@@ -1,5 +1,7 @@
 import 'package:addrive/Controller/Profile/myprofile.dart';
 import 'package:addrive/View/Screens/ProfileRegistration/personaldetails.dart';
+import 'package:addrive/View/Screens/accountmanagment.dart';
+import 'package:addrive/View/Screens/complaintpage.dart';
 import 'package:addrive/View/Screens/loginpage.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
@@ -44,16 +46,23 @@ class _ProfilePageState extends State<ProfilePage> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Error: ${profileProvider.error}',
-                          style: AppTextStyle.base.copyWith(color: Colors.red),
-                          textAlign: TextAlign.center,
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Text(
+                            'Please check your internet connection and try again.',
+                            style: AppTextStyle.base.copyWith(color: Color(0xFF5B4BDB)),
+                            textAlign: TextAlign.center,
+                          ),
                         ),
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () {
                             profileProvider.fetchProfileData();
                           },
+                          style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6C5CE7),
+              foregroundColor: Colors.white,
+            ),
                           child: Text('Retry'),
                         ),
                       ],
@@ -90,28 +99,75 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
                             Container(
-                              padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
                                 color: Colors.grey[100],
                                 shape: BoxShape.circle,
                               ),
                               child: Stack(
                                 children: [
-                                  const Icon(
-                                    Icons.notifications_outlined,
-                                    color: Colors.black87,
-                                    size: 24,
-                                  ),
-                                  Positioned(
-                                    right: 0,
-                                    top: 0,
-                                    child: Container(
-                                      width: 8,
-                                      height: 8,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.red,
-                                        shape: BoxShape.circle,
+                                  // Replace your current settings icon container with this:
+                                  Theme(
+                                    data: Theme.of(context).copyWith(
+                                      cardColor: Colors.white,
+                                      popupMenuTheme: PopupMenuThemeData(
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(
+                                            12,
+                                          ),
+                                        ),
+                                        elevation: 4,
                                       ),
+                                    ),
+                                    child: PopupMenuButton<String>(
+                                      padding: EdgeInsets.zero,
+                                      icon: const Icon(
+                                        Icons.settings_outlined,
+                                        color: Colors.black87,
+                                        size: 24,
+                                      ),
+                                      onSelected: (value) {
+                                        _handleSettingsMenuSelection(
+                                          value,
+                                          context,
+                                        );
+                                      },
+                                      itemBuilder: (BuildContext context) {
+                                        return [
+                                          PopupMenuItem<String>(
+                                            value: 'account',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.person_outline,
+                                                  size: 20,
+                                                  color: Colors.black87,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text('Account Management'),
+                                              ],
+                                            ),
+                                          ),
+                                          PopupMenuItem<String>(
+                                            value: 'complaint',
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.report_problem_outlined,
+                                                  size: 20,
+                                                  color: Colors.red,
+                                                ),
+                                                SizedBox(width: 8),
+                                                Text(
+                                                  'Complaint Registration',
+                                                  style: TextStyle(
+                                                    color: Colors.red,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ];
+                                      },
                                     ),
                                   ),
                                 ],
@@ -181,7 +237,9 @@ class _ProfilePageState extends State<ProfilePage> {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (context) => PersonalDetails(),
+                                builder: (context) => PersonalDetails(
+                                  isEditing: true,
+                                ), // Add this
                               ),
                             );
                           },
@@ -629,38 +687,61 @@ class _ProfilePageState extends State<ProfilePage> {
       ],
     );
   }
+
   void _showLogoutConfirmation() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Logout'),
-      content: Text('Are you sure you want to logout?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: Text('Cancel'),
-        ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context); // Close the dialog
-            
-            // Perform logout and redirect immediately
-            final profileProvider = context.read<ProfileProvider>();
-            await profileProvider.logout();
-            
-            Navigator.pushAndRemoveUntil(
-              context,
-              MaterialPageRoute(builder: (context) => LoginScreen()),
-              (Route<dynamic> route) => false,
-            );
-          },
-          child: Text(
-            'Yes, Logout',
-            style: TextStyle(color: Colors.red),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Logout'),
+        content: Text('Are you sure you want to logout from your account?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel'),
           ),
-        ),
-      ],
-    ),
-  );
-}
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close the dialog
+
+              // Perform logout and redirect immediately
+              final profileProvider = context.read<ProfileProvider>();
+              await profileProvider.logout();
+
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(builder: (context) => LoginScreen()),
+                (Route<dynamic> route) => false,
+              );
+            },
+            child: Text('Yes, Logout', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleSettingsMenuSelection(String value, BuildContext context) {
+    switch (value) {
+      case 'account':
+        // Navigate to Account Management page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                AccountManagementPage(), // Replace with your actual page
+          ),
+        );
+        break;
+      case 'complaint':
+        // Navigate to Complaint Registration page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                ComplaintRegistrationPage(), // Replace with your actual page
+          ),
+        );
+        break;
+    }
+  }
 }

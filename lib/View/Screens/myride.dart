@@ -39,34 +39,34 @@ class MyRidePage extends StatelessWidget {
                           color: Colors.black,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Stack(
-                          children: [
-                            const Icon(
-                              Icons.notifications_outlined,
-                              color: Colors.black87,
-                              size: 24,
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      // Container(
+                      //   padding: const EdgeInsets.all(8),
+                      //   decoration: BoxDecoration(
+                      //     color: Colors.grey[100],
+                      //     shape: BoxShape.circle,
+                      //   ),
+                      //   child: Stack(
+                      //     children: [
+                      //       const Icon(
+                      //         Icons.notifications_outlined,
+                      //         color: Colors.black87,
+                      //         size: 24,
+                      //       ),
+                      //       Positioned(
+                      //         right: 0,
+                      //         top: 0,
+                      //         child: Container(
+                      //           width: 8,
+                      //           height: 8,
+                      //           decoration: const BoxDecoration(
+                      //             color: Colors.red,
+                      //             shape: BoxShape.circle,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
                   ),
                 ),
@@ -95,6 +95,8 @@ class MyRidePage extends StatelessWidget {
                           if (!rideProvider.isLoading &&
                               rideProvider.currentLocation != null)
                             FlutterMap(
+                              mapController: rideProvider
+                                  .mapController, // Add MapController to your provider
                               options: MapOptions(
                                 initialCenter: rideProvider.currentLocation!,
                                 initialZoom: 16.0,
@@ -102,14 +104,25 @@ class MyRidePage extends StatelessWidget {
                                   flags: InteractiveFlag.all,
                                 ),
                                 onMapReady: () {
-                                  // Map is ready
+                                  // Use a slight delay to ensure map is fully initialized
+                                  Future.delayed(
+                                    const Duration(milliseconds: 200),
+                                    () {
+                                      if (rideProvider.currentLocation !=
+                                          null) {
+                                        rideProvider.mapController.move(
+                                          rideProvider.currentLocation!,
+                                          16.0,
+                                        );
+                                      }
+                                    },
+                                  );
                                 },
                               ),
                               children: [
                                 TileLayer(
                                   urlTemplate:
-                                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                                  subdomains: const ['a', 'b', 'c'],
+                                      'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                                   userAgentPackageName: 'com.techfifo.addrive',
                                   tileProvider: NetworkTileProvider(),
                                   tileBuilder: (context, tileWidget, tile) {
@@ -119,12 +132,25 @@ class MyRidePage extends StatelessWidget {
                                     'https://via.placeholder.com/256/cccccc/ffffff?text=Map+Tile',
                                   ),
                                 ),
-                                // Current Location Marker
+                                // Accuracy circle (background)
+                                CircleLayer(
+                                  circles: [
+                                    CircleMarker(
+                                      point: rideProvider.currentLocation!,
+                                      radius: 20,
+                                      useRadiusInMeter: false,
+                                      color: Colors.blue.withOpacity(0.15),
+                                      borderColor: Colors.blue.withOpacity(0.3),
+                                      borderStrokeWidth: 1.5,
+                                    ),
+                                  ],
+                                ),
+                                // Car Driver Marker
                                 MarkerLayer(
                                   markers: [
                                     Marker(
-                                      width: 50.0,
-                                      height: 50.0,
+                                      width: 60.0,
+                                      height: 60.0,
                                       point: rideProvider.currentLocation!,
                                       child: Container(
                                         decoration: BoxDecoration(
@@ -132,33 +158,54 @@ class MyRidePage extends StatelessWidget {
                                           shape: BoxShape.circle,
                                           boxShadow: [
                                             BoxShadow(
-                                              color: Colors.blue.withOpacity(
-                                                0.5,
+                                              color: Colors.black.withOpacity(
+                                                0.2,
                                               ),
-                                              blurRadius: 10,
-                                              spreadRadius: 2,
+                                              blurRadius: 8,
+                                              spreadRadius: 1,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                          border: Border.all(
+                                            color: const Color(0xFF2196F3),
+                                            width: 3,
+                                          ),
+                                        ),
+                                        child: Stack(
+                                          alignment: Alignment.center,
+                                          children: [
+                                            // Main car icon
+                                            const Icon(
+                                              Icons.directions_car,
+                                              color: Color(0xFF2196F3),
+                                              size: 32,
+                                            ),
+                                            // Small pulse indicator
+                                            Positioned(
+                                              bottom: 8,
+                                              child: Container(
+                                                width: 8,
+                                                height: 8,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFF4CAF50,
+                                                  ),
+                                                  shape: BoxShape.circle,
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                        0xFF4CAF50,
+                                                      ).withOpacity(0.5),
+                                                      blurRadius: 4,
+                                                      spreadRadius: 1,
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
                                             ),
                                           ],
                                         ),
-                                        child: const Icon(
-                                          Icons.location_pin,
-                                          color: Colors.blue,
-                                          size: 40,
-                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                // Circle around current location
-                                CircleLayer(
-                                  circles: [
-                                    CircleMarker(
-                                      point: rideProvider.currentLocation!,
-                                      radius: 15,
-                                      useRadiusInMeter: false,
-                                      color: Colors.blue.withOpacity(0.2),
-                                      borderColor: Colors.blue.withOpacity(0.5),
-                                      borderStrokeWidth: 2,
                                     ),
                                   ],
                                 ),
@@ -233,15 +280,15 @@ class MyRidePage extends StatelessWidget {
                               bottom: 16,
                               right: 16,
                               child: FloatingActionButton(
-                                mini: true,
                                 backgroundColor: Colors.white,
+                                elevation: 4,
                                 onPressed: () {
-                                  // Recenter to current location
-                                  // You'll need to implement this functionality
+                                  rideProvider.recenterMap();
                                 },
                                 child: const Icon(
                                   Icons.my_location,
-                                  color: Colors.blue,
+                                  color: Color(0xFF5B4BDB),
+                                  size: 24,
                                 ),
                               ),
                             ),
@@ -589,109 +636,114 @@ class MyRidePage extends StatelessWidget {
     );
   }
 
- void _handleStartRide(BuildContext context, RideProvider rideProvider) async {
-  // Check if there's an active campaign
-  if (rideProvider.activeCampaign == null) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('No Active Campaign'),
-        content: Text('You need to be enrolled in a campaign to start a ride.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
+  void _handleStartRide(BuildContext context, RideProvider rideProvider) async {
+    // Check if there's an active campaign
+    if (rideProvider.activeCampaign == null) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('No Active Campaign'),
+          content: Text(
+            'You need to be enrolled in a campaign to start a ride.',
           ),
-        ],
-      ),
-    );
-    return;
-  }
-  
-  final campaignId = rideProvider.activeCampaign!.id.toString();
-  
-  // Show loading dialog
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => AlertDialog(
-      content: Row(
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 20),
-          Text('Checking upload status...'),
-        ],
-      ),
-    ),
-  );
-
-  // Check weekly upload status first
-  await rideProvider.checkWeeklyUploadStatus(context, campaignId);
-
-  // Dismiss loading dialog
-  Navigator.of(context).pop();
-
-  // Check has_uploaded_before
-  final hasUploadedBefore = rideProvider.weeklyUploadStatus?['has_uploaded_before'] ?? false;
-  
-  if (!hasUploadedBefore) {
-    // Navigate to ImageUploads
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ImageUploads(campaignId: campaignId)
-      ),
-    );
-    return;
-  }
-
-  // User has uploaded before, continue with ride start
-  // Show loading dialog for ride start
-  showDialog(
-    context: context,
-    barrierDismissible: false,
-    builder: (context) => AlertDialog(
-      content: Row(
-        children: [
-          CircularProgressIndicator(),
-          SizedBox(width: 20),
-          Text('Starting ride...'),
-        ],
-      ),
-    ),
-  );
-
-  // Start ride with tracking
-  bool success = await rideProvider.startRideWithTracking(context, campaignId);
-
-  // Dismiss loading dialog
-  Navigator.of(context).pop();
-
-  if (success && rideProvider.isRideActive) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Ride started successfully!'),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
-  } else {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Failed to Start Ride'),
-        content: Text(
-          rideProvider.error ?? 
-          'Unable to start ride. Please try again.',
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
-          ),
-        ],
+      );
+      return;
+    }
+
+    final campaignId = rideProvider.activeCampaign!.id.toString();
+
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('Checking upload status...'),
+          ],
+        ),
       ),
     );
+
+    // Check weekly upload status first
+    await rideProvider.checkWeeklyUploadStatus(context, campaignId);
+
+    // Dismiss loading dialog
+    Navigator.of(context).pop();
+
+    // Check has_uploaded_before
+    final hasUploadedBefore =
+        rideProvider.weeklyUploadStatus?['has_uploaded_before'] ?? false;
+
+    if (!hasUploadedBefore) {
+      // Navigate to ImageUploads
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ImageUploads(campaignId: campaignId),
+        ),
+      );
+      return;
+    }
+
+    // User has uploaded before, continue with ride start
+    // Show loading dialog for ride start
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        content: Row(
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(width: 20),
+            Text('Starting ride...'),
+          ],
+        ),
+      ),
+    );
+
+    // Start ride with tracking
+    bool success = await rideProvider.startRideWithTracking(
+      context,
+      campaignId,
+    );
+
+    // Dismiss loading dialog
+    Navigator.of(context).pop();
+
+    if (success && rideProvider.isRideActive) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ride started successfully!'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('Failed to Start Ride'),
+          content: Text(
+            rideProvider.error ?? 'Unable to start ride. Please try again.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('OK'),
+            ),
+          ],
+        ),
+      );
+    }
   }
-}
 }

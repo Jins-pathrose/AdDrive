@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "567288230556",
+    "project_id": "addrive-5f8ea",
+    "storage_bucket": "addrive-5f8ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567288230556:android:9525878f00754746d43359",
+        "android_client_info": {
+          "package_name": "com.Metro.AdDrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrkVLXeuUcqbDl-qEC88kh-xr9M8JdWwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:567288230556:android:84b90660938411a8d43359",
+        "android_client_info": {
+          "package_name": "com.techfifo.addrive"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrkVLXeuUcqbDl-qEC88kh-xr9M8JdWwI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

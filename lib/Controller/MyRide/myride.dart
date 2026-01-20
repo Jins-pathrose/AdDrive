@@ -3,6 +3,7 @@ import 'package:addrive/Model/apiclient.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:geolocator/geolocator.dart';
@@ -33,6 +34,7 @@ class RideProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   Map<String, dynamic>? get weeklyUploadStatus => _weeklyUploadStatus;
   String? get error => _error;
+  final MapController mapController = MapController();
 
   // Add these constants at the top of RideProvider class
   static const String _rideActiveKey = 'ride_active';
@@ -255,7 +257,12 @@ class RideProvider with ChangeNotifier {
       return {'success': false, 'error': e.toString()};
     }
   }
-
+void recenterMap() {
+  if (_currentLocation != null) {
+    mapController.move(_currentLocation!, 16.0);
+    notifyListeners();
+  }
+}
   // Method to send GPS update
   Future<bool> sendGpsUpdate(double latitude, double longitude) async {
     try {

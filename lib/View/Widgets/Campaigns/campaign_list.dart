@@ -86,10 +86,13 @@ Widget build(BuildContext context) {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(
-            error!,
-            style: AppTextStyle.base.copyWith(color: Colors.red, fontSize: 16),
-            textAlign: TextAlign.center,
+          Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Text(
+              "Please check your internet connection and try again",
+              style: AppTextStyle.base.copyWith(color: Color(0xFF5B4BDB)),
+              textAlign: TextAlign.center,
+            ),
           ),
           const SizedBox(height: 16),
           ElevatedButton(

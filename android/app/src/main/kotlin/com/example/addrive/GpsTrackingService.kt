@@ -69,45 +69,50 @@ class GpsTrackingService : Service() {
     }
 
     private fun sendGps(location: Location) {
-        Log.d(TAG, "➡️ sendGps() called")
+    val lat = location.latitude
+    val lng = location.longitude
 
-        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-        val tripId = prefs.getLong("flutter.current_trip_id", -1L)
-        val token = prefs.getString("flutter.access_token", null)
+    Log.d(TAG, "➡️ sendGps() called")
+    Log.d(TAG, "📤 Sending Location -> Latitude: $lat , Longitude: $lng")
 
-        Log.d(TAG, "🧾 tripId=$tripId token=${token != null}")
+    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+    val tripId = prefs.getLong("flutter.current_trip_id", -1L)
+    val token = prefs.getString("flutter.access_token", null)
 
-        if (tripId == -1L || token.isNullOrEmpty()) {
-            Log.d(TAG, "⛔ Skipping API call (invalid trip or token)")
-            return
-        }
+    Log.d(TAG, "🧾 tripId=$tripId token=${token != null}")
 
-        val json = JSONObject().apply {
-            put("trip_id", tripId)
-            put("latitude", location.latitude)
-            put("longitude", location.longitude)
-        }
-
-        Log.d(TAG, "🌐 Sending API request")
-
-        val request = Request.Builder()
-            .url("https://backend.drarifdentistry.com/gps/update")
-            .addHeader("Authorization", "Bearer $token") // ✅ IMPORTANT
-            .addHeader("Content-Type", "application/json")
-            .post(json.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-
-        OkHttpClient().newCall(request).enqueue(object : Callback {
-            override fun onFailure(call: Call, e: java.io.IOException) {
-                Log.e(TAG, "❌ API FAILED: ${e.message}")
-            }
-
-            override fun onResponse(call: Call, response: Response) {
-                Log.d(TAG, "✅ API SUCCESS code=${response.code}")
-                response.close()
-            }
-        })
+    if (tripId == -1L || token.isNullOrEmpty()) {
+        Log.d(TAG, "⛔ Skipping API call (invalid trip or token)")
+        return
     }
+
+    val json = JSONObject().apply {
+        put("trip_id", tripId)
+        put("latitude", lat)
+        put("longitude", lng)
+    }
+
+    Log.d(TAG, "🌐 API Payload: $json")
+
+    val request = Request.Builder()
+        .url("https://backend.drarifdentistry.com/gps/update")
+        .addHeader("Authorization", "Bearer $token")
+        .addHeader("Content-Type", "application/json")
+        .post(json.toString().toRequestBody("application/json".toMediaType()))
+        .build()
+
+    OkHttpClient().newCall(request).enqueue(object : Callback {
+        override fun onFailure(call: Call, e: java.io.IOException) {
+            Log.e(TAG, "❌ API FAILED for lat=$lat lng=$lng : ${e.message}")
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+            Log.d(TAG, "✅ API SUCCESS (${response.code}) for lat=$lat lng=$lng")
+            response.close()
+        }
+    })
+}
+
 
     private fun startForegroundServiceInternal() {
 

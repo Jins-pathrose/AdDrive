@@ -11,18 +11,25 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 class PersonalDetails extends StatelessWidget {
-  const PersonalDetails({super.key});
+  final bool isEditing;
+
+  const PersonalDetails({super.key, this.isEditing = false});
 
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (_) => PersonalDetailsProvider()..fetchPersonalDetails(),
-      child: _PersonalDetailsBody(),
+      create: (_) =>
+          PersonalDetailsProvider()..fetchPersonalDetails(isEditing: isEditing),
+
+      child: _PersonalDetailsBody(isEditing: isEditing),
     );
   }
 }
 
 class _PersonalDetailsBody extends StatelessWidget {
+  final bool isEditing;
+
+  const _PersonalDetailsBody({required this.isEditing});
   @override
   Widget build(BuildContext context) {
     final prov = Provider.of<PersonalDetailsProvider>(context);
@@ -53,6 +60,7 @@ class _PersonalDetailsBody extends StatelessWidget {
                     const SizedBox(height: 24),
 
                     // ---------- PROFILE PICTURE ----------
+                    // In _PersonalDetailsBody - Fix the profile picture section:
                     Center(
                       child: Stack(
                         children: [
@@ -62,19 +70,21 @@ class _PersonalDetailsBody extends StatelessWidget {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: const Color(0xFF5B4BDB),
-                              image: prov.profilePictureUrl.isEmpty
-                                  ? const DecorationImage(
-                                      image: AssetImage(
-                                        'assets/images/Jins_Black.jpg',
-                                      ),
-                                      fit: BoxFit.cover,
-                                    )
-                                  : DecorationImage(
-                                      image: NetworkImage(
-                                        prov.profilePictureUrl,
-                                      ),
-                                      fit: BoxFit.cover,
-                                    ),
+                              image: DecorationImage(
+                                fit: BoxFit.cover,
+                                image: prov.profilePictureFile != null
+                                    ? FileImage(
+                                        prov.profilePictureFile!,
+                                      ) // ✅ LOCAL IMAGE
+                                    : (prov.profilePictureUrl.isNotEmpty
+                                              ? NetworkImage(
+                                                  prov.profilePictureUrl,
+                                                ) // ✅ SERVER IMAGE
+                                              : const AssetImage(
+                                                  'assets/images/profile-icon-design-free-vector.jpg',
+                                                ))
+                                          as ImageProvider,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -82,7 +92,7 @@ class _PersonalDetailsBody extends StatelessWidget {
                             right: 0,
                             child: GestureDetector(
                               onTap: () async {
-                                // await prov.pickImage();
+                                await prov.pickImage();
                               },
                               child: Container(
                                 padding: const EdgeInsets.all(4),
@@ -108,6 +118,7 @@ class _PersonalDetailsBody extends StatelessWidget {
                         ],
                       ),
                     ),
+
                     const SizedBox(height: 30),
 
                     // ---------- TEXT FIELDS ----------
@@ -146,43 +157,44 @@ class _PersonalDetailsBody extends StatelessWidget {
                     const SizedBox(height: 20),
 
                     // ---------- PAYMENT OPTION ----------
-                    Text(
-                      'Payment Option',
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 12,
-                        color: Colors.grey[600],
+                    if (!isEditing) ...[
+                      // Only show during registration
+                      Text(
+                        'Payment Option',
+                        style: AppTextStyle.base.copyWith(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildPaymentButton(
-                            icon: Icons.person,
-                            label: 'Self',
-                            isSelected: prov.selectindex == 0,
-                            onTap: () => prov.setTab(0),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildPaymentButton(
+                              icon: Icons.person,
+                              label: 'Self',
+                              isSelected: prov.selectindex == 0,
+                              onTap: () => prov.setTab(0),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildPaymentButton(
-                            icon: Icons.directions_car,
-                            label: 'Fleet',
-                            isSelected: prov.selectindex == 1,
-                            onTap: () => prov.setTab(1),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildPaymentButton(
+                              icon: Icons.directions_car,
+                              label: 'Fleet',
+                              isSelected: prov.selectindex == 1,
+                              onTap: () => prov.setTab(1),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    if (prov.selectindex == 1) _buildFleetDropdown(prov),
-                    const SizedBox(height: 30),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      if (prov.selectindex == 1) _buildFleetDropdown(prov),
+                      const SizedBox(height: 16),
+                    ],
 
                     // ---------- UPDATE BUTTON ----------
                     // Inside _PersonalDetailsBody → replace the ElevatedButton
-                    // Update Details Button
                     SizedBox(
                       width: double.infinity,
                       height: 50,
@@ -234,7 +246,7 @@ class _PersonalDetailsBody extends StatelessWidget {
                                 ),
                               )
                             : Text(
-                                'Update Details',
+                                isEditing ? 'Update Profile' : 'Update Details',
                                 style: AppTextStyle.base.copyWith(
                                   color: Colors.white,
                                   fontSize: 16,

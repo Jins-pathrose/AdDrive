@@ -120,11 +120,9 @@ log(campaignId);
         'Authorization': 'Bearer $token',
         'Content-Type': 'application/json',
       },
-    );
+    ); 
 
     _fleetCampaignLoading[campaignId] = false;
-print(response.statusCode);
-print('888888888888888888');
     if (response.statusCode == 200 || response.statusCode == 201) {
       // Mark campaign as joined
       _joinedFleetCampaigns.add(campaignId);

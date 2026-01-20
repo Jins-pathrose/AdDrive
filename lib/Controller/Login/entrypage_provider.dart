@@ -35,7 +35,8 @@ class EntryPageProvider with ChangeNotifier {
       } else {
         // Token is invalid or expired, try to refresh
         final refreshResult = await _refreshAccessToken(refreshToken);
-        
+        print(refreshResult);
+        print("ijijijijijijijij");
         if (refreshResult != null && refreshResult['access'] != null) {
           // Save both new tokens
           await prefs.setString('access_token', refreshResult['access']!);
@@ -52,6 +53,8 @@ class EntryPageProvider with ChangeNotifier {
           // Refresh failed, clear tokens
           await prefs.remove('access_token');
           await prefs.remove('refresh_token');
+          print('namskaaarammmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmm');
+          
           _isCheckingToken = false;
           notifyListeners();
           return false;
@@ -77,7 +80,8 @@ class EntryPageProvider with ChangeNotifier {
           'Content-Type': 'application/json',
         },
       );
-      
+      print(response.statusCode);
+      print("15515151551515");
       return response.statusCode == 200;
     } catch (e) {
       return false;
@@ -111,6 +115,8 @@ class EntryPageProvider with ChangeNotifier {
             if (refreshToken != null) 'refresh': refreshToken,
           };
         }
+        print(response.statusCode);
+        print("token refresh failed with status: ${response.statusCode}");
         return null;
       } else {
         print('Token refresh failed with status: ${response.statusCode}');

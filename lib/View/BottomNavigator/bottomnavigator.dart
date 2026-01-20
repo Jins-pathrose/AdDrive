@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:addrive/View/Screens/campaigns.dart';
 import 'package:addrive/View/Screens/homepage.dart';
 import 'package:addrive/View/Screens/myride.dart';
-import 'package:addrive/View/Screens/notifications.dart';
 import 'package:addrive/View/Screens/profile.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +29,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     HomePage(),
     MyRidePage(),
     CampaignsPage(),
-    Notifications(),
+    // Notifications(),
     ProfilePage(),
   ];
 
@@ -39,7 +38,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     Icons.home_rounded,
     Icons.directions_car_rounded,
     Icons.campaign_rounded,
-    Icons.notifications_rounded,
+    // Icons.notifications_rounded,
     Icons.person_rounded,
   ];
 
@@ -48,7 +47,7 @@ class _BottomNavigatorState extends State<BottomNavigator> {
     'Home',
     'My Ride',
     'Campaigns',
-    'Alerts',
+    // 'Alerts',
     'Profile',
   ];
 

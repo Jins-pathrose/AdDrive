@@ -1,4 +1,3 @@
-import 'package:addrive/Model/campaigns_model.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class ApiConfig {

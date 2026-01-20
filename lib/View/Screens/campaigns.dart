@@ -1,4 +1,3 @@
-
 import 'package:addrive/Controller/campaigns_tab.dart';
 import 'package:addrive/View/Widgets/Campaigns/campaign_list.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
@@ -59,16 +58,15 @@ class _CampaignsPageState extends State<CampaignsPage> {
                 _buildTabs(tabProvider),
                 const SizedBox(height: 20),
                 Expanded(
-  child: CampaignsList(
-    campaigns: currentCampaigns,
-    isCompletedTab: tabProvider.selectedTab == 1,
-    onRetry: _loadCampaigns,
-    isLoading: campaignsProvider.isLoading,
-    error: campaignsProvider.error,
-    rootContext: context, // <-- ADD THIS
-  ),
-),
-
+                  child: CampaignsList(
+                    campaigns: currentCampaigns,
+                    isCompletedTab: tabProvider.selectedTab == 1,
+                    onRetry: _loadCampaigns,
+                    isLoading: campaignsProvider.isLoading,
+                    error: campaignsProvider.error,
+                    rootContext: context, // <-- ADD THIS
+                  ),
+                ),
               ],
             ),
           ),
@@ -91,7 +89,7 @@ class _CampaignsPageState extends State<CampaignsPage> {
               color: Colors.black,
             ),
           ),
-          _buildNotificationIcon(),
+          // _buildNotificationIcon(),
         ],
       ),
     );

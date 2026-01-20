@@ -401,7 +401,7 @@ Future<bool> saveVehicleDetails() async {
 
     // Parse response
     final responseData = json.decode(respStr);
-    
+    print('Vehicle details Response status: ${response.statusCode}');
     if (response.statusCode == 200 || response.statusCode == 201) {
       debugPrint('Vehicle details ${_hasExistingData ? 'updated' : 'saved'} successfully');
       
