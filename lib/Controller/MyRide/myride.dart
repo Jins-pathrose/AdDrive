@@ -1,5 +1,6 @@
 import 'package:addrive/Model/activecampaign_model.dart';
 import 'package:addrive/Model/apiclient.dart';
+import 'package:addrive/Model/apiconfig.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -35,10 +36,15 @@ class RideProvider with ChangeNotifier {
   Map<String, dynamic>? get weeklyUploadStatus => _weeklyUploadStatus;
   String? get error => _error;
   final MapController mapController = MapController();
+  bool _shouldNavigateToUpload = false;
+
+  bool get shouldNavigateToUpload => _shouldNavigateToUpload;
 
   // Add these constants at the top of RideProvider class
   static const String _rideActiveKey = 'ride_active';
   static const String _currentTripIdKey = 'current_trip_id';
+  
+  get targetKilometers => _activeCampaign?.targetKilometers;
 
   // Add this method to save ride state to SharedPreferences
   Future<void> _saveRideState() async {
@@ -159,14 +165,15 @@ class RideProvider with ChangeNotifier {
         // Call API to pause/end the trip
         final response = await http.post(
           Uri.parse(
-            'https://backend.drarifdentistry.com/gps/pause',
+            'https://backend.drarifdentistry.com/api/toggle-trip',
           ), // Update with your endpoint
           headers: {
             'Content-Type': 'application/json',
             'Authorization': 'Bearer $token',
           },
           body: json.encode({
-            'access_token': token,
+            // 'access_token': token,
+            'trip_id': _currentTripId,
             'status': 'paused', // or 'ended' based on your needs
           }),
         );
@@ -196,73 +203,187 @@ class RideProvider with ChangeNotifier {
   }
 
   // Method to start trip (create or get existing trip)
-  Future<Map<String, dynamic>> startTrip(String campaignId) async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString('access_token');
+  // Method to start trip (create or get existing trip)
+Future<Map<String, dynamic>> startTrip(int campaignId) async {
+  try {
 
-      if (token == null) {
-        throw Exception('Authentication token not found');
-      }
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
 
-      // First, try to get active trip
-      final getResponse = await http.get(
-        Uri.parse('https://addrive.kkms.co.in/api/start-trip/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
-
-      if (getResponse.statusCode == 200) {
-        final data = json.decode(getResponse.body);
-
-        // Check if there's an active trip_id in response
-        if (data.containsKey('trip_id') && data['trip_id'] != null) {
-          _currentTripId = data['trip_id'];
-          // DON'T set _isRideActive here yet
-          return {'success': true, 'trip_id': _currentTripId, 'existing': true};
-        }
-      }
-
-      // If no active trip, create a new one
-      final postResponse = await http.post(
-        Uri.parse('https://addrive.kkms.co.in/api/start-trip/'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: json.encode({'campaign_id': campaignId}),
-      );
-
-      if (postResponse.statusCode == 200 || postResponse.statusCode == 201) {
-        final data = json.decode(postResponse.body);
-        if (data.containsKey('trip_id') && data['trip_id'] != null) {
-          _currentTripId = data['trip_id'];
-          // DON'T set _isRideActive here yet
-          return {
-            'success': true,
-            'trip_id': _currentTripId,
-            'existing': false,
-          };
-        } else {
-          throw Exception('No trip_id in response');
-        }
-      } else {
-        throw Exception('Failed to create trip: ${postResponse.statusCode}');
-      }
-    } catch (e) {
-      _error = 'Failed to start trip: $e';
-      notifyListeners();
-      return {'success': false, 'error': e.toString()};
+    if (token == null) {
+      throw Exception('Authentication token not found');
     }
-  }
-void recenterMap() {
-  if (_currentLocation != null) {
-    mapController.move(_currentLocation!, 16.0);
+
+    await _getdriverid();
+    final driverId = prefs.getInt('driver_id');
+    print('Driver ID: $driverId');
+    print('Retrieved Type: ${driverId.runtimeType}');
+
+    // First, check if there's an existing active trip
+    final checkResponse = await http.get(
+      Uri.parse(
+        'https://backend.drarifdentistry.com/api/start-trip?driver_id=$driverId',
+      ),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+    );
+    
+    print('Check trip response: ${checkResponse.statusCode}');
+    print('Check trip response body: ${checkResponse.body}');
+
+    if (checkResponse.statusCode == 200) {
+      final data = json.decode(checkResponse.body);
+      
+      // Check if there's an active trip and if can_start_new is false (meaning there's an active trip)
+      if (data['trip_details'] != null && 
+          data['trip_details']['trip_id'] != null && 
+          data['can_start_new'] == false) {
+        
+        _currentTripId = data['trip_details']['trip_id'];
+        print('Found existing active trip with ID: $_currentTripId');
+        
+        // Send update for existing trip with current location
+        if (_currentLocation != null) {
+          await _updateExistingTrip(
+            data['trip_details']['trip_id'],
+            _currentLocation!.latitude,
+            _currentLocation!.longitude,
+          );
+        }
+        
+        return {
+          'success': true, 
+          'trip_id': _currentTripId, 
+          'existing': true,
+          'trip_details': data['trip_details']
+        };
+      }
+    }
+
+    // If no active trip exists or can_start_new is true, create a new one
+    await _getEndDate();
+    final endDate = prefs.getString('end_date');
+    print('End Date: $endDate');
+    print('Target Kilometers: $targetKilometers');
+    
+    final createResponse = await http.post(
+      Uri.parse('https://backend.drarifdentistry.com/api/start-trip/'),
+      headers: {
+        'Content-Type': 'application/json',
+        // 'Authorization': 'Bearer $token', // Uncomment if authentication is required
+      },
+      
+      body: json.encode({
+        'campaign_id': campaignId,
+        'driver_id': driverId,
+        "target_kilometers": targetKilometers,
+        "latitude": _currentLocation!.latitude.toString(),
+        "longitude":_currentLocation!.longitude.toString(),
+        "end_date": endDate,
+      }),
+    );
+    
+    print('Create trip response: ${createResponse.statusCode}');
+    print('Create trip response body: ${createResponse.body}');
+    
+    if (createResponse.statusCode == 200 || createResponse.statusCode == 201) {
+      final data = json.decode(createResponse.body);
+      if (data.containsKey('trip_id') && data['trip_id'] != null) {
+        _currentTripId = data['trip_id'];
+        return {
+          'success': true,
+          'trip_id': _currentTripId,
+          'existing': false,
+          'trip_details': data
+        };
+      } else {
+        throw Exception('No trip_id in response');
+      }
+    } else {
+      throw Exception('Failed to create trip: ${createResponse.statusCode}');
+    }
+  } catch (e) {
+    _error = 'Failed to start trip: $e';
     notifyListeners();
+    return {'success': false, 'error': e.toString()};
   }
 }
+
+// Helper method to update existing trip with location
+Future<bool> _updateExistingTrip(int tripId, double latitude, double longitude) async {
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('access_token');
+
+    if (token == null) {
+      print('No access token for updating existing trip');
+      return false;
+    }
+
+    final response = await http.post(
+      Uri.parse('https://backend.drarifdentistry.com/api/start-trip/'),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      },
+      body: json.encode({
+        'trip_id': tripId,
+        'status': 'active',
+        'latitude': latitude.toString(),
+        'longitude': longitude.toString(),
+      }),
+    );
+
+    print('Update existing trip response: ${response.statusCode}');
+    print('Update existing trip body: ${response.body}');
+
+    return response.statusCode == 200 || response.statusCode == 201;
+  } catch (e) {
+    print('Failed to update existing trip: $e');
+    return false;
+  }
+}
+
+  void recenterMap() {
+    if (_currentLocation != null) {
+      mapController.move(_currentLocation!, 16.0);
+      notifyListeners();
+    }
+  }
+
+  Future<void> _getEndDate() async {
+    final response = await api.get(
+      'https://addrive.kkms.co.in/api/driver/active-campaign/',
+    );
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      final endDate = data['campaign']['end_date'];
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('end_date', endDate);
+    }
+  }
+
+  Future<void> _getdriverid() async {
+    final response = await api.get(ApiConfig.personalDetailsUrl);
+
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+
+      // Ensure conversion to int
+      final int driverId = int.parse(data['id'].toString());
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('driver_id', driverId);
+
+      print("Saved Driver ID Type: ${driverId.runtimeType}");
+    }
+  }
+
   // Method to send GPS update
   Future<bool> sendGpsUpdate(double latitude, double longitude) async {
     try {
@@ -283,13 +404,18 @@ void recenterMap() {
       print('Latitude: $latitude, Longitude: $longitude');
 
       // Try different endpoint variations
-      final endpoints = ['https://backend.drarifdentistry.com/gps/update'];
+      final endpoints = [
+        'https://backend.drarifdentistry.com/api/update-location',
+      ];
 
       for (String endpoint in endpoints) {
         try {
           final response = await http.post(
             Uri.parse(endpoint),
-            headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
             body: json.encode({
               // 'access_token': token,
               'trip_id': _currentTripId,
@@ -321,7 +447,7 @@ void recenterMap() {
   // Method to start ride with all steps
   Future<bool> startRideWithTracking(
     BuildContext context,
-    String campaignId,
+    int campaignId,
   ) async {
     try {
       // 1. Check if user can start ride
@@ -454,7 +580,6 @@ void recenterMap() {
   }
 
   Future<void> fetchActiveCampaign() async {
-
     _isFetchingCampaign = true;
     _error = null;
     notifyListeners();
@@ -469,8 +594,8 @@ void recenterMap() {
       }
 
       final response = await api.get(
-      'https://addrive.kkms.co.in/api/driver/active-campaign/',
-    );
+        'https://addrive.kkms.co.in/api/driver/active-campaign/',
+      );
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -479,9 +604,7 @@ void recenterMap() {
         } else {
           _activeCampaign = null;
         }
-      }
-      
-       else {
+      } else {
         _error = 'Failed to fetch campaign: ${response.statusCode}';
       }
     } catch (e) {
@@ -492,7 +615,7 @@ void recenterMap() {
     }
   }
 
-  Future<bool> canStartRide(BuildContext context, String campaignId) async {
+  Future<bool> canStartRide(BuildContext context, int campaignId) async {
     await checkWeeklyUploadStatus(context, campaignId);
 
     if (_weeklyUploadStatus != null) {
@@ -518,7 +641,7 @@ void recenterMap() {
 
   Future<void> checkWeeklyUploadStatus(
     BuildContext context,
-    String campaignId,
+    int campaignId,
   ) async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -526,6 +649,8 @@ void recenterMap() {
 
       if (token == null) {
         _error = 'Authentication token not found';
+        _shouldNavigateToUpload = false;
+        notifyListeners();
         return;
       }
 
@@ -546,16 +671,45 @@ void recenterMap() {
         _weeklyUploadStatus = data;
         _error = null;
 
-        // Navigation logic should be in the UI layer, not here
-        // Remove the Navigator.push from here
+        final bool hasUploadedBefore = data['has_uploaded_before'] ?? false;
+
+        final String? nextUploadDateStr = data['next_upload_date'];
+
+        bool isToday = false;
+
+        if (nextUploadDateStr != null) {
+          final DateTime nextUploadDate = DateTime.parse(nextUploadDateStr);
+
+          final DateTime now = DateTime.now();
+          final DateTime today = DateTime(now.year, now.month, now.day);
+
+          final DateTime nextDate = DateTime(
+            nextUploadDate.year,
+            nextUploadDate.month,
+            nextUploadDate.day,
+          );
+
+          isToday = !today.isBefore(nextDate);
+        }
+
+        // ✅ FINAL CONDITION
+        if (!hasUploadedBefore || isToday) {
+          _shouldNavigateToUpload = true;
+        } else {
+          _shouldNavigateToUpload = false;
+        }
       } else if (response.statusCode == 401) {
         _error = 'Unauthorized - Please check your authentication';
+        _shouldNavigateToUpload = false;
       } else {
         _error = 'Failed to check upload status: ${response.statusCode}';
+        _shouldNavigateToUpload = false;
       }
     } catch (e) {
       _error = 'Network error: $e';
+      _shouldNavigateToUpload = false;
     }
+
     notifyListeners();
   }
 

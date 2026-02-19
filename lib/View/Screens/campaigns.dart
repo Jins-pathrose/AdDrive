@@ -1,7 +1,9 @@
 import 'package:addrive/Controller/campaigns_tab.dart';
+import 'package:addrive/Model/campaigns_model.dart';
 import 'package:addrive/View/Widgets/Campaigns/campaign_list.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:addrive/View/Widgets/notificationicon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,14 +39,11 @@ class _CampaignsPageState extends State<CampaignsPage> {
     final tabProvider = Provider.of<CampaignTabProvider>(context);
     final campaignsProvider = Provider.of<CampaignsProvider>(context);
 
-    // Get campaigns from provider
-    final allCampaigns = campaignsProvider.campaigns;
-
-    final completedCampaigns = campaignsProvider.completedCampaigns;
 
     final currentCampaigns = tabProvider.selectedTab == 0
-        ? allCampaigns
-        : completedCampaigns;
+    ? campaignsProvider.activeCampaigns
+    : campaignsProvider.completedCampaignList;
+
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -89,38 +88,7 @@ class _CampaignsPageState extends State<CampaignsPage> {
               color: Colors.black,
             ),
           ),
-          // _buildNotificationIcon(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationIcon() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        shape: BoxShape.circle,
-      ),
-      child: Stack(
-        children: [
-          const Icon(
-            Icons.notifications_outlined,
-            color: Colors.black87,
-            size: 24,
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: const BoxDecoration(
-                color: Colors.red,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ),
+          const NotificationIcon(),
         ],
       ),
     );

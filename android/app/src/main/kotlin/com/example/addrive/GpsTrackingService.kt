@@ -24,7 +24,9 @@ class GpsTrackingService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+
         Log.d(TAG, "🚀 Service CREATED")
+        LogStream.send("🚀 GPS Service created")
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
@@ -35,6 +37,7 @@ class GpsTrackingService : Service() {
     private fun startLocationUpdates() {
 
         Log.d(TAG, "📡 Starting location updates")
+        LogStream.send("📡 Starting location updates")
 
         val locationRequest = LocationRequest.Builder(
             Priority.PRIORITY_HIGH_ACCURACY,
@@ -46,15 +49,21 @@ class GpsTrackingService : Service() {
 
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(result: LocationResult) {
+
                 val location = result.lastLocation
                 if (location == null) {
                     Log.d(TAG, "⚠️ Location is NULL")
+                    LogStream.send("⚠️ Location is NULL")
                     return
                 }
 
                 Log.d(
                     TAG,
-                    "📍 Location callback fired: ${location.latitude}, ${location.longitude}"
+                    "📍 Location: ${location.latitude}, ${location.longitude}"
+                )
+
+                LogStream.send(
+                    "📍 Location received → Lat: ${location.latitude}, Lng: ${location.longitude}"
                 )
 
                 sendGps(location)
@@ -69,50 +78,51 @@ class GpsTrackingService : Service() {
     }
 
     private fun sendGps(location: Location) {
-    val lat = location.latitude
-    val lng = location.longitude
 
-    Log.d(TAG, "➡️ sendGps() called")
-    Log.d(TAG, "📤 Sending Location -> Latitude: $lat , Longitude: $lng")
+        val lat = location.latitude
+        val lng = location.longitude
 
-    val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
-    val tripId = prefs.getLong("flutter.current_trip_id", -1L)
-    val token = prefs.getString("flutter.access_token", null)
+        LogStream.send("➡️ sendGps() called")
 
-    Log.d(TAG, "🧾 tripId=$tripId token=${token != null}")
+        val prefs = getSharedPreferences("FlutterSharedPreferences", MODE_PRIVATE)
+        val tripId = prefs.getLong("flutter.current_trip_id", -1L)
+        val token = prefs.getString("flutter.access_token", null)
 
-    if (tripId == -1L || token.isNullOrEmpty()) {
-        Log.d(TAG, "⛔ Skipping API call (invalid trip or token)")
-        return
-    }
+        LogStream.send("🧾 tripId=$tripId token=${token != null}")
 
-    val json = JSONObject().apply {
-        put("trip_id", tripId)
-        put("latitude", lat)
-        put("longitude", lng)
-    }
-
-    Log.d(TAG, "🌐 API Payload: $json")
-
-    val request = Request.Builder()
-        .url("https://backend.drarifdentistry.com/gps/update")
-        .addHeader("Authorization", "Bearer $token")
-        .addHeader("Content-Type", "application/json")
-        .post(json.toString().toRequestBody("application/json".toMediaType()))
-        .build()
-
-    OkHttpClient().newCall(request).enqueue(object : Callback {
-        override fun onFailure(call: Call, e: java.io.IOException) {
-            Log.e(TAG, "❌ API FAILED for lat=$lat lng=$lng : ${e.message}")
+        if (tripId == -1L || token.isNullOrEmpty()) {
+            LogStream.send("⛔ Skipping API call (invalid trip or token)")
+            return
         }
 
-        override fun onResponse(call: Call, response: Response) {
-            Log.d(TAG, "✅ API SUCCESS (${response.code}) for lat=$lat lng=$lng")
-            response.close()
+        val json = JSONObject().apply {
+            put("trip_id", tripId)
+            put("latitude", lat)
+            put("longitude", lng)
         }
-    })
-}
 
+        LogStream.send("🌐 Sending API payload: $json")
+
+        val request = Request.Builder()
+            .url("https://backend.drarifdentistry.com/api/update-location")
+            .addHeader("Authorization", "Bearer $token")
+            .addHeader("Content-Type", "application/json")
+            .post(json.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+
+        OkHttpClient().newCall(request).enqueue(object : Callback {
+
+            override fun onFailure(call: Call, e: java.io.IOException) {
+                Log.e(TAG, "❌ API FAILED: ${e.message}")
+                LogStream.send("❌ API FAILED: ${e.message}")
+            }
+
+            override fun onResponse(call: Call, response: Response) {
+                LogStream.send("✅ API SUCCESS (${response.code})")
+                response.close()
+            }
+        })
+    }
 
     private fun startForegroundServiceInternal() {
 
@@ -144,11 +154,11 @@ class GpsTrackingService : Service() {
             startForeground(101, notification)
         }
 
-        Log.d(TAG, "🔔 Foreground notification shown")
+        LogStream.send("🔔 Foreground service started")
     }
 
     override fun onDestroy() {
-        Log.d(TAG, "🛑 Service DESTROYED")
+        LogStream.send("🛑 GPS Service destroyed")
         fusedLocationClient.removeLocationUpdates(locationCallback)
         super.onDestroy()
     }

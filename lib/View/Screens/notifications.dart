@@ -1,22 +1,93 @@
 import 'package:addrive/Controller/notifications_tab.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:addrive/View/Widgets/notificationicon.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-class Notifications extends StatelessWidget {
+class Notifications extends StatefulWidget {
   const Notifications({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final notificationtab = Provider.of<NotificationTabProvider>(
+  State<Notifications> createState() => _NotificationsState();
+}
+
+class _NotificationsState extends State<Notifications> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<NotificationTabProvider>(
+        context,
+        listen: false,
+      ).fetchNotifications();
+    });
+  }
+
+  Future<void> _handleDelete(BuildContext context, int notificationId) async {
+    final provider = Provider.of<NotificationTabProvider>(
       context,
-    ); // <--->
+      listen: false,
+    );
+
+    // Show confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Notification'),
+        content: const Text(
+          'Are you sure you want to delete this notification?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Deleting notification...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      final success = await provider.deleteNotification(notificationId);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Notification deleted successfully'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to delete notification'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-         BackgroundDecoration(),
+          const BackgroundDecoration(),
           SafeArea(
             child: Column(
               children: [
@@ -34,33 +105,16 @@ class Notifications extends StatelessWidget {
                           color: Colors.black,
                         ),
                       ),
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Stack(
-                          children: [
-                            const Icon(
-                              Icons.notifications_outlined,
-                              color: Colors.black87,
-                              size: 24,
-                            ),
-                            Positioned(
-                              right: 0,
-                              top: 0,
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  color: Colors.red,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
+                      Consumer<NotificationTabProvider>(
+                        builder: (context, provider, child) {
+                          return NotificationIcon(
+                            onTap: () {
+                              // Refresh notifications when tapped
+                              provider.fetchNotifications();
+                            },
+                            badgeSize: provider.unreadCount > 0 ? 18 : 8,
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -69,29 +123,173 @@ class Notifications extends StatelessWidget {
                 // Tabs
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      _buildTab(
-                        '''What's New''',
-                        notificationtab.selectedIndex == 0,
-                        () => notificationtab.setTab(0),
-                      ),
-                      const SizedBox(width: 12),
-                      _buildTab(
-                        'Previously',
-                        notificationtab.selectedIndex == 1,
-                        () => notificationtab.setTab(1),
-                      ),
-                    ],
+                  child: Consumer<NotificationTabProvider>(
+                    builder: (context, provider, child) {
+                      return Row(
+                        children: [
+                          _buildTab(
+                            'What\'s New (${provider.newNotifications.length})',
+                            provider.selectedIndex == 0,
+                            () => provider.setTab(0),
+                          ),
+                          const SizedBox(width: 12),
+                          // _buildTab(
+                          //   'Previously (${provider.oldNotifications.length})',
+                          //   provider.selectedIndex == 1,
+                          //   () => provider.setTab(1),
+                          // ),
+                        ],
+                      );
+                    },
                   ),
                 ),
 
                 const SizedBox(height: 20),
 
+                // Notifications List with Swipe to Delete
                 Expanded(
-                  child: notificationtab.selectedIndex == 0
-                      ? _buildnotificationtiles()
-                      : _oldnotifications(),
+  child: Consumer<NotificationTabProvider>(
+    builder: (context, provider, child) {
+      // Show error first
+      if (provider.error != null) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                "Please check your internet connection and try again",
+                style: const TextStyle(color: Color(0xFF5B4BDB)),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: () => provider.fetchNotifications(),
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        );
+      }
+
+      // Show loading only when actually loading
+      // if (provider.isLoading) {
+      //   return const Center(child: CircularProgressIndicator());
+      // }
+
+      // Get notifications based on selected tab
+      final notifications = provider.selectedIndex == 0
+          ? provider.newNotifications
+          : provider.oldNotifications;
+
+      // Show empty state
+      if (notifications.isEmpty) {
+        return Center(
+          child: Text(
+            provider.selectedIndex == 0
+                ? 'No new notifications'
+                : 'No old notifications',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        );
+      }
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        itemCount: notifications.length,
+                        itemBuilder: (context, index) {
+                          final notification = notifications[index];
+                          return Dismissible(
+                            key: Key('notification_${notification.id}'),
+                            direction: DismissDirection.endToStart,
+                            background: Container(
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.only(right: 20),
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(
+                                Icons.delete,
+                                color: Colors.white,
+                                size: 30,
+                              ),
+                            ),
+                            confirmDismiss: (direction) async {
+                              return await showDialog(
+                                context: context,
+                                builder: (BuildContext context) {
+                                  return AlertDialog(
+                                    title: const Text('Delete Notification'),
+                                    content: const Text(
+                                      'Are you sure you want to delete this notification?',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.of(context).pop(true),
+                                        style: TextButton.styleFrom(
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        child: const Text('Delete'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                            onDismissed: (direction) async {
+                              final success = await provider.deleteNotification(
+                                notification.id,
+                              );
+
+                              if (success) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Notification deleted'),
+                                    duration: const Duration(seconds: 2),
+                                    // action: SnackBarAction(
+                                    //   label: 'UNDO',
+                                    //   textColor: Colors.white,
+                                    //   onPressed: () {
+                                    //     // You would need to implement undo functionality
+                                    //     // This would require storing the deleted notification
+                                    //   },
+                                    // ),
+                                  ),
+                                );
+                              } else {
+                                // If delete failed, refresh the list
+                                provider.fetchNotifications();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Failed to delete notification',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            child: _buildNotificationCard(
+                              notification.title,
+                              notification.message,
+                              provider.getTimeAgo(notification.createdAt),
+                              isRead: notification.isRead,
+                              onTap: () => provider.markAsRead(notification.id),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -101,58 +299,18 @@ class Notifications extends StatelessWidget {
     );
   }
 
-  Widget _buildnotificationtiles() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-
-      children: [
-        _buildNotificationCard(
-          '"Your campaign is live!"',
-          'Start driving and earn for every trip you make. Check your campaign dashboard now.',
-          '',
-        ),
-        _buildNotificationCard(
-          '"Only a few kilometers away from your bonus! 🚀"',
-          'Your weekly target is almost complete — just a few more trips to go. Hit your distance goal before Sunday night to claim your full campaign bonus. Open your app to track your real-time progress and finish strong!',
-          '',
-        ),
-
-        _buildNotificationCard(
-          '"Campaign extended 🎉"',
-          'Good news! The current marketing campaign of Lenovo has been extended — keep driving and earning.',
-          '',
-        ),
-        _buildNotificationCard(
-          '"Bonus alert! 💰"',
-          'Hit your weekly distance goal to unlock extra rewards!',
-          '',
-        ),
-        _buildNotificationCard(
-          'Nike wants to ride with you! ⭐',
-          'We\'ve partnered with an exciting new brand for this month\'s campaign. Join now to start earning with higher visibility rewards and exclusive bonuses. Tap below to see campaign details and register before slots fill up.',
-          '',
-        ),
-        _buildNotificationCard(
-          'Your current campaign ends soon 🏆',
-          'We\'re wrapping up the current brand campaign in a few days. Complete your remaining drives and update your vehicle status.',
-          '',
-        ),
-      ],
-    );
-  }
-
   Widget _buildTab(String text, bool isActive, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isActive ? const Color(0xFFE8E3FF) : Colors.transparent,
+          color: Color(0xFFEDE8FF),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
           text,
-          style: TextStyle(
+          style: AppTextStyle.base.copyWith(
             color: isActive ? const Color(0xFF6C5CE7) : Colors.grey,
             fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
             fontSize: 13,
@@ -165,45 +323,69 @@ class Notifications extends StatelessWidget {
   Widget _buildNotificationCard(
     String title,
     String description,
-    String timeAgo,
-  ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.4),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-        color: const Color.fromARGB(255, 255, 255, 255),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.withOpacity(0.1), width: 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: AppTextStyle.base.copyWith(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+    String timeAgo, {
+    bool isRead = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      // onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.3),
+              spreadRadius: 3,
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
+          ],
+          color: isRead
+              ? const Color.fromARGB(255, 255, 255, 255)
+              : const Color.fromARGB(255, 255, 255, 255),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: const Color.fromARGB(255, 255, 255, 255)!,
+            width: isRead ? 1 : 1.5,
           ),
-          const SizedBox(height: 8),
-          Text(
-            description,
-            style: AppTextStyle.base.copyWith(
-              fontSize: 12,
-              color: Colors.grey[700],
-              height: 1.5,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '"$title"',
+
+                    style: AppTextStyle.base.copyWith(
+                      fontSize: 16,
+                      fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                ),
+                if (!isRead)
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+              ],
             ),
-          ),
-          if (timeAgo.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(
+              description,
+              style: AppTextStyle.base.copyWith(
+                fontSize: 12,
+                color: Colors.grey[700],
+                height: 1.5,
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               timeAgo,
@@ -213,16 +395,7 @@ class Notifications extends StatelessWidget {
               ),
             ),
           ],
-        ],
-      ),
-    );
-  }
-
-  Widget _oldnotifications() {
-    return const Center(
-      child: Text(
-        'No old notifications',
-        style: TextStyle(fontSize: 16, color: Colors.grey),
+        ),
       ),
     );
   }

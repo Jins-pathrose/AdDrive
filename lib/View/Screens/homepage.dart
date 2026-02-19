@@ -3,6 +3,7 @@ import 'package:addrive/Controller/Profile/myprofile.dart';
 import 'package:addrive/View/BottomNavigator/bottomnavigator.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:addrive/View/Widgets/notificationicon.dart';
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
 import 'package:provider/provider.dart';
@@ -10,6 +11,18 @@ import 'package:intl/intl.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
+
+  Future<void> _refreshData(BuildContext context) async {
+    // Get providers
+    final campaignProvider = context.read<ActiveCampaignProvider>();
+    final profileProvider = context.read<ProfileProvider>();
+    
+    // Fetch both campaign and profile data simultaneously
+    await Future.wait([
+      campaignProvider.fetchActiveCampaign(),
+      profileProvider.fetchProfileData(),
+    ]);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,15 +48,33 @@ class HomePage extends StatelessWidget {
                 if (campaignProvider.isLoading) {
                   return _buildFullScreenWithHeader(
                     context,
-                    _buildCenteredContent(_buildCampaignLoading()),
+                    Center(
+                      child: RefreshIndicator(
+                        onRefresh: () => _refreshData(context),
+                        color: const Color(0xFF6C3FE4),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: _buildCenteredContent(_buildCampaignLoading()),
+                        ),
+                      ),
+                    ),
                   );
                 }
 
                 if (campaignProvider.error != null) {
                   return _buildFullScreenWithHeader(
                     context,
-                    _buildCenteredContent(
-                      _buildCampaignError(campaignProvider.error!, context),
+                    Center(
+                      child: RefreshIndicator(
+                        onRefresh: () => _refreshData(context),
+                        color: const Color(0xFF6C3FE4),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: _buildCenteredContent(
+                            _buildCampaignError(campaignProvider.error!, context),
+                          ),
+                        ),
+                      ),
                     ),
                   );
                 }
@@ -54,31 +85,44 @@ class HomePage extends StatelessWidget {
                     campaignData['status'] != 'active_campaign') {
                   return _buildFullScreenWithHeader(
                     context,
-                    _buildCenteredContent(
-                      _buildNoActiveCampaignHandler(context),
+                    RefreshIndicator(
+                      onRefresh: () => _refreshData(context),
+                      color: const Color(0xFF6C3FE4),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: _buildCenteredContent(
+                          _buildNoActiveCampaignHandler(context),
+                        ),
+                      ),
                     ),
                   );
                 }
 
                 // Normal layout for active campaign
                 final campaign = campaignData['campaign'];
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 20),
-                      // Header
-                      _buildHeader(context),
-                      const SizedBox(height: 8),
+                return RefreshIndicator(
+                  onRefresh: () => _refreshData(context),
+                  color: const Color(0xFF6C3FE4),
+                  backgroundColor: Colors.white,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(height: 20),
+                        // Header
+                        _buildHeader(context),
+                        const SizedBox(height: 8),
 
-                      // Task Card with Campaign
-                      _buildTaskCardWithCampaign(campaign),
-                      const SizedBox(height: 8),
+                        // Task Card with Campaign
+                        _buildTaskCardWithCampaign(campaign),
+                        const SizedBox(height: 8),
 
-                      // Participants Section
-                      _buildParticipantsSection(),
-                    ],
+                        // Participants Section
+                        _buildParticipantsSection(),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -91,84 +135,72 @@ class HomePage extends StatelessWidget {
 
   // Build header section
   Widget _buildHeader(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 5, right: 5),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Consumer<ProfileProvider>(
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 5),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded( // ✅ Constrains left side properly
+          child: Consumer<ProfileProvider>(
             builder: (context, profileProvider, child) {
               final profile = profileProvider.profileData?.profile;
+
               return Row(
                 children: [
                   CircleAvatar(
                     radius: 25,
                     backgroundImage:
                         (profile?.profilePicture?.isNotEmpty ?? false)
-                        ? NetworkImage(profile!.profilePicture) as ImageProvider
-                        : const AssetImage(
-                            'assets/images/placeholder_avatar.jpg',
-                          ),
+                            ? NetworkImage(profile!.profilePicture)
+                                as ImageProvider
+                            : const AssetImage(
+                                'assets/images/placeholder_avatar.jpg',
+                              ),
                   ),
                   const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Hello!',
-                        style: AppTextStyle.base.copyWith(
-                          fontSize: 12,
-                          color: Colors.grey[600],
+
+                  // ✅ Constrain the text column
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Hello!',
+                          style: AppTextStyle.base.copyWith(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
                         ),
-                      ),
-                      Text(
-                        profile?.fullName?.isNotEmpty ?? false
-                            ? profile!.fullName
-                            : 'Driver',
-                        style: AppTextStyle.base.copyWith(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
+                        Text(
+                          profile?.fullName?.isNotEmpty ?? false
+                              ? profile!.fullName
+                              : 'Driver',
+                          maxLines: 1, // ✅ Prevent overflow
+                          overflow: TextOverflow.ellipsis, // ✅ Add ...
+                          style: AppTextStyle.base.copyWith(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black87,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ],
               );
             },
           ),
-          // Container(
-          //   padding: const EdgeInsets.all(8),
-          //   decoration: BoxDecoration(
-          //     color: Colors.grey[100],
-          //     shape: BoxShape.circle,
-          //   ),
-          //   child: Stack(
-          //     children: [
-          //       const Icon(
-          //         Icons.notifications_outlined,
-          //         color: Colors.black87,
-          //         size: 24,
-          //       ),
-          //       Positioned(
-          //         right: 0,
-          //         top: 0,
-          //         child: Container(
-          //           width: 8,
-          //           height: 8,
-          //           decoration: const BoxDecoration(
-          //             color: Colors.red,
-          //             shape: BoxShape.circle,
-          //           ),
-          //         ),
-          //       ),
-          //     ],
-          //   ),
-          // ),
-        ],
-      ),
-    );
-  }
+        ),
+
+        const SizedBox(width: 10),
+
+        const NotificationIcon(), // right side icon
+      ],
+    ),
+  );
+}
+
 
   // Build full screen with header and centered content
   Widget _buildFullScreenWithHeader(
@@ -201,7 +233,7 @@ class HomePage extends StatelessWidget {
   // Campaign Loading Widget
   Widget _buildCampaignLoading() {
     return Column(
-      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         CircularProgressIndicator(
           strokeWidth: 2,
@@ -372,22 +404,49 @@ class HomePage extends StatelessWidget {
   return Consumer<ActiveCampaignProvider>(
     builder: (context, campaignProvider, child) {
       final progressData = campaignProvider.campaignData?['progress'];
-      final currentProgress = progressData?['current_driver_progress'];
       
-      // Get current user's percentage
+      // Handle both data formats
+      Map<String, dynamic>? currentProgress;
       double userPercentage = 0.0;
-      if (currentProgress != null && currentProgress['percentage'] != null) {
-        try {
-          final percentageStr = currentProgress['percentage'].toString();
-          userPercentage = double.parse(percentageStr.replaceAll('%', ''));
-        } catch (e) {
-          userPercentage = 0.0;
+      double currentKm = 0.0;
+      double targetKm = 100.0;
+      
+      if (progressData != null) {
+        // Get current driver progress
+        currentProgress = campaignProvider.getCurrentDriverProgress();
+        
+        // Get target km
+        if (campaignProvider.isAnalyticsFormat) {
+          targetKm = progressData['target_km']?.toDouble() ?? 
+                    (double.tryParse(progressData['target']?.toString() ?? '100.0') ?? 100.0);
+        } else {
+          targetKm = progressData['target_km']?.toDouble() ?? 100.0;
+        }
+        
+        // Get percentage
+        if (currentProgress != null && currentProgress['percentage'] != null) {
+          try {
+            final percentageStr = currentProgress['percentage'].toString();
+            userPercentage = double.parse(percentageStr.replaceAll('%', ''));
+          } catch (e) {
+            userPercentage = 0.0;
+          }
+        }
+        
+        // Get current km
+        if (currentProgress != null) {
+          currentKm = currentProgress['cumulative_km']?.toDouble() ?? 
+                     currentProgress['total_lifetime_km']?.toDouble() ?? 0.0;
         }
       }
       
-      // Get progress value for CircularProgressIndicator (convert to 0-1 range)
-      final progressValue = userPercentage / 100;
-      
+      // Parse and format dates
+      final startDate = DateTime.parse(campaign['start_date']);
+      final endDate = DateTime.parse(campaign['end_date']);
+      final dateFormat = DateFormat('dd MMM yyyy');
+      final formattedStartDate = dateFormat.format(startDate);
+      final formattedEndDate = dateFormat.format(endDate);
+
       // Determine text based on percentage
       String progressText;
       if (userPercentage >= 80) {
@@ -402,17 +461,6 @@ class HomePage extends StatelessWidget {
         progressText = 'Ready to start?\nBegin your first ride !!';
       }
       
-      // Get target km
-      final targetKm = progressData?['target_km']?.toDouble() ?? 100.0;
-      final currentKm = currentProgress?['cumulative_km']?.toDouble() ?? 0.0;
-      
-      // Parse and format dates
-      final startDate = DateTime.parse(campaign['start_date']);
-      final endDate = DateTime.parse(campaign['end_date']);
-      final dateFormat = DateFormat('dd MMM yyyy');
-      final formattedStartDate = dateFormat.format(startDate);
-      final formattedEndDate = dateFormat.format(endDate);
-
       return Container(
         margin: const EdgeInsets.all(12),
         decoration: BoxDecoration(
@@ -498,7 +546,7 @@ class HomePage extends StatelessWidget {
                           width: 100,
                           height: 100,
                           child: CircularProgressIndicator(
-                            value: progressValue,
+                            value: userPercentage / 100,
                             strokeWidth: 5,
                             backgroundColor: Colors.white.withOpacity(0.3),
                             valueColor: const AlwaysStoppedAnimation<Color>(
@@ -567,7 +615,7 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    campaign['campaign_name'] ?? 'Campaign',
+                    campaign['campaign_name'] ?? 'Active Trip Campaign',
                     style: AppTextStyle.base.copyWith(
                       fontSize: 19,
                       fontWeight: FontWeight.bold,
@@ -748,6 +796,7 @@ class HomePage extends StatelessWidget {
                   // Extract name from email
                   final name = email.split('@').first;
                   final displayName = name.length > 12
+                  
                       ? '${name.substring(0, 12)}...'
                       : name;
 
@@ -774,8 +823,7 @@ class HomePage extends StatelessWidget {
                     percentage: percentage.toInt(),
                     color: rankColor,
                     profileImage: profileImage,
-                    isCurrentUser: index == 0, // First one is current driver
-                  );
+                    isCurrentUser: participant['driver_id'] == campaignProvider.currentDriverId,);
                 }).toList(),
               ),
             ),
@@ -787,186 +835,193 @@ class HomePage extends StatelessWidget {
 
   // Updated Participant Tile with network image
   Widget _buildParticipantTile({
-    required int rank,
-    required String name,
-    required String distance,
-    required int percentage,
-    required Color color,
-    String? profileImage,
-    bool isCurrentUser = false,
-  }) {
-    String imageUrl;
+  required int rank,
+  required String name,
+  required String distance,
+  required int percentage,
+  required Color color,
+  String? profileImage,
+  bool isCurrentUser = false,
+}) {
+  String imageUrl;
 
-    if (profileImage != null && profileImage.isNotEmpty) {
-      if (profileImage.startsWith('http')) {
-        imageUrl = profileImage;
-      } else {
-        imageUrl = 'https://addrive.kkms.co.in$profileImage';
-      }
+  if (profileImage != null && profileImage.isNotEmpty) {
+    if (profileImage.startsWith('http')) {
+      imageUrl = profileImage;
+    } else if (profileImage.startsWith('/')) {
+      imageUrl = 'https://addrive.kkms.co.in$profileImage';
     } else {
-      imageUrl = ''; // Will use placeholder
+      imageUrl = profileImage;
     }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: isCurrentUser
-            ? Border.all(color: Colors.purple[200]!, width: 1.5)
-            : null,
-      ),
-      child: Row(
-        children: [
-          // Rank Badge
-          Container(
-            width: 40,
-            child: Column(
-              children: [
-                Container(
-                  width: 30,
-                  height: 30,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Center(
-                    child: Text(
-                      '$rank',
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color:  Colors.black87,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Rank',
-                  style: AppTextStyle.base.copyWith(
-                    fontSize: 10,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-
-          // Profile Image
-          profileImage != null && profileImage.isNotEmpty
-              ? CircleAvatar(
-                  radius: 22,
-                  backgroundImage: NetworkImage(imageUrl),
-                  backgroundColor: Colors.grey[200],
-                  onBackgroundImageError: (exception, stackTrace) {
-                    // Handle error if image fails to load
-                  },
-                )
-              : CircleAvatar(
-                  radius: 22,
-                  backgroundColor: Colors.grey[200],
-                  child: Icon(Icons.person, color: Colors.grey[500]),
-                ),
-          const SizedBox(width: 12),
-
-          // Name and Distance
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      name,
-                      style: AppTextStyle.base.copyWith(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    if (isCurrentUser) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.purple[100],
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          'You',
-                          style: AppTextStyle.base.copyWith(
-                            fontSize: 10,
-                            color: Colors.purple[700],
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  distance,
-                  style: AppTextStyle.base.copyWith(
-                    fontSize: 13,
-                    color: Colors.grey[600],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // Progress Circle
-          SizedBox(
-            width: 50,
-            height: 50,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(2.0),
-                  child: SizedBox(
-                    width: 50,
-                    height: 50,
-                    child: CircularProgressIndicator(
-                      value: percentage / 100,
-                      strokeWidth: 4,
-                      backgroundColor: Colors.grey[200],
-                      valueColor: AlwaysStoppedAnimation<Color>(color),
-                    ),
-                  ),
-                ),
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      '$percentage%',
-                      style: AppTextStyle.base.copyWith(
-                        color: color,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+  } else {
+    imageUrl = ''; // Will use placeholder
   }
+
+  // Rest of your participant tile code remains the same...
+  return Container(
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.1),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: isCurrentUser
+          ? Border.all(color: Colors.purple[200]!, width: 1.5)
+          : null,
+    ),
+    child: Row(
+      children: [
+        // Rank Badge
+        Container(
+          width: 40,
+          child: Column(
+            children: [
+              Container(
+                width: 30,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '$rank',
+                    style: AppTextStyle.base.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Rank',
+                style: AppTextStyle.base.copyWith(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 12),
+
+        // Profile Image
+        imageUrl.isNotEmpty
+            ? CircleAvatar(
+                radius: 22,
+                backgroundImage: NetworkImage(imageUrl),
+                backgroundColor: Colors.grey[200],
+                onBackgroundImageError: (exception, stackTrace) {
+                  // Handle error if image fails to load
+                },
+              )
+            : CircleAvatar(
+                radius: 22,
+                backgroundColor: Colors.grey[200],
+                child: Icon(Icons.person, color: Colors.grey[500]),
+              ),
+        const SizedBox(width: 12),
+
+        // Name and Distance
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+  children: [
+    Expanded(
+      child: Text(
+        name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTextStyle.base.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+    ),
+    if (isCurrentUser) ...[
+      const SizedBox(width: 6),
+      Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 6,
+          vertical: 2,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.purple[100],
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(
+          'You',
+          style: AppTextStyle.base.copyWith(
+            fontSize: 10,
+            color: Colors.purple[700],
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+    ],
+  ],
+),
+              const SizedBox(height: 2),
+              Text(
+                distance,
+                style: AppTextStyle.base.copyWith(
+                  fontSize: 13,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Progress Circle
+        SizedBox(
+          width: 50,
+          height: 50,
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(2.0),
+                child: SizedBox(
+                  width: 50,
+                  height: 50,
+                  child: CircularProgressIndicator(
+                    value: percentage / 100,
+                    strokeWidth: 4,
+                    backgroundColor: Colors.grey[200],
+                    valueColor: AlwaysStoppedAnimation<Color>(color),
+                  ),
+                ),
+              ),
+              Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    '$percentage%',
+                    style: AppTextStyle.base.copyWith(
+                      color: color,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }

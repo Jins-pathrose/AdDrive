@@ -1,6 +1,7 @@
-// widgets/campaigns_list.dart
+// // widgets/campaigns_list.dart
 import 'package:addrive/Controller/campaigns_tab.dart';
 import 'package:addrive/Model/campaigns_model.dart';
+import 'package:addrive/Model/completedcampaigns_model.dart';
 import 'package:addrive/View/Widgets/Campaigns/fleetcampaign_card.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
 import 'package:flutter/material.dart';
@@ -8,7 +9,7 @@ import 'package:provider/provider.dart';
 import 'campaign_card.dart';
 
 class CampaignsList extends StatelessWidget {
-  final List<Campaign> campaigns;
+  final List<dynamic> campaigns;
   final bool isCompletedTab;
   final VoidCallback onRetry;
   final bool isLoading;
@@ -25,61 +26,145 @@ class CampaignsList extends StatelessWidget {
     required this.rootContext,
   });
 
-  // In CampaignsList widget build method, replace with:
-@override
-Widget build(BuildContext context) {
-  final campaignsProvider = Provider.of<CampaignsProvider>(context, listen: true);
-  
-  if (campaignsProvider.isLoading) {
-    return const Center(
-      child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
-    );
-  }
-
-  if (campaignsProvider.error != null) {
-    return _buildErrorState();
-  }
-
-  // Check if driver is fleet and show fleet campaigns
-  if (campaignsProvider.isFleetDriver) {
-    final fleetCampaigns = campaignsProvider.fleetCampaigns;
+  @override
+  Widget build(BuildContext context) {
+    final campaignsProvider = Provider.of<CampaignsProvider>(context, listen: true);
+    final tabProvider = Provider.of<CampaignTabProvider>(context, listen: true);
     
-    if (fleetCampaigns.isEmpty) {
-      return Center(
-        child: Text(
-          'No fleet campaigns available',
-          style: const TextStyle(fontSize: 16, color: Colors.grey),
-        ),
+    if (campaignsProvider.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF6C5CE7)),
       );
+    }
+
+    if (campaignsProvider.error != null) {
+      return _buildErrorState();
+    }
+
+    // For fleet drivers
+    if (campaignsProvider.isFleetDriver) {
+      // Check which tab is selected
+      if (tabProvider.selectedTab == 1) {
+        // COMPLETED TAB - Show completed campaigns from the dedicated endpoint
+        final completedCampaigns = campaignsProvider.completedCampaigns;
+        
+        if (completedCampaigns.isEmpty) {
+          return Center(
+            child: Text(
+              'No completed campaigns',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: completedCampaigns.length,
+          itemBuilder: (context, index) {
+            final completedCampaign = completedCampaigns[index];
+            // You might need a specific card for completed campaigns
+            // For now, using a generic container
+            return _buildCompletedCampaignCard(completedCampaign);
+          },
+        );
+      } else {
+        // ALL CAMPAIGNS TAB - Show active fleet campaigns
+        final activeFleetCampaigns = campaignsProvider.fleetCampaigns
+            .where((c) => c.status.toLowerCase() != 'completed')
+            .toList();
+        
+        if (activeFleetCampaigns.isEmpty) {
+          return Center(
+            child: Text(
+              'No active fleet campaigns',
+              style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          itemCount: activeFleetCampaigns.length,
+          itemBuilder: (context, index) {
+            final campaign = activeFleetCampaigns[index];
+            return FleetCampaignCard(campaign: campaign);
+          },
+        );
+      }
+    }
+
+    // Original logic for non-fleet drivers
+    if (campaigns.isEmpty) {
+      return _buildEmptyState();
     }
 
     return ListView.builder(
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      itemCount: fleetCampaigns.length,
+      itemCount: campaigns.length,
       itemBuilder: (context, index) {
-        final campaign = fleetCampaigns[index];
-        return FleetCampaignCard(campaign: campaign);
+        final campaign = campaigns[index];
+        return CampaignCard(
+          campaign: campaign,
+          onJoinPressed: () => _handleJoinCampaign(context, campaign),
+        );
       },
     );
   }
 
-  // Original logic for non-fleet drivers
-  if (campaigns.isEmpty) {
-    return _buildEmptyState();
+  Widget _buildCompletedCampaignCard(CompletedCampaign campaign) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              campaign.campaignName,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Target: ${campaign.targetKilometers} km'),
+                Text('Earned: ₹${campaign.totalEarnedAmount}'),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Period: ${campaign.startDate} to ${campaign.endDate}'),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Text(
+                    'Completed',
+                    style: TextStyle(
+                      color: Colors.green,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
-
-  return ListView.builder(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    itemCount: campaigns.length,
-    itemBuilder: (context, index) {
-      final campaign = campaigns[index];
-      return CampaignCard(
-        campaign: campaign,
-        onJoinPressed: () => _handleJoinCampaign(context, campaign),
-      );
-    },
-  );
-}
 
   Widget _buildErrorState() {
     return Center(
@@ -90,7 +175,7 @@ Widget build(BuildContext context) {
             padding: const EdgeInsets.all(8.0),
             child: Text(
               "Please check your internet connection and try again",
-              style: AppTextStyle.base.copyWith(color: Color(0xFF5B4BDB)),
+              style: AppTextStyle.base.copyWith(color: const Color(0xFF5B4BDB)),
               textAlign: TextAlign.center,
             ),
           ),
@@ -118,7 +203,7 @@ Widget build(BuildContext context) {
   }
 
   void _handleJoinCampaign(BuildContext context, Campaign campaign) {
-    final parentContext = context; // <-- store safe context
+    final parentContext = context;
 
     showDialog(
       context: context,
@@ -132,14 +217,13 @@ Widget build(BuildContext context) {
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(dialogContext); // close dialog
+              Navigator.pop(dialogContext);
 
               bool success = await Provider.of<CampaignsProvider>(
                 parentContext,
                 listen: false,
               ).joinCampaign(campaign.id);
 
-              // Use safe parent context, not dialogContext
               ScaffoldMessenger.of(rootContext).showSnackBar(
                 SnackBar(
                   content: Text(

@@ -1,6 +1,7 @@
 import 'package:addrive/Controller/MyRide/myride.dart';
 import 'package:addrive/View/Screens/imageuploads.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:addrive/View/Widgets/notificationicon.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:provider/provider.dart';
@@ -39,6 +40,8 @@ class MyRidePage extends StatelessWidget {
                           color: Colors.black,
                         ),
                       ),
+                                const NotificationIcon(), 
+
                       // Container(
                       //   padding: const EdgeInsets.all(8),
                       //   decoration: BoxDecoration(
@@ -498,7 +501,7 @@ class MyRidePage extends StatelessWidget {
                               Padding(
                                 padding: const EdgeInsets.only(top: 8),
                                 child: Text(
-                                  rideProvider.error!,
+                                  "Please try again later",
                                   style: AppTextStyle.base.copyWith(
                                     fontSize: 12,
                                     color: Colors.red,
@@ -657,7 +660,7 @@ class MyRidePage extends StatelessWidget {
       return;
     }
 
-    final campaignId = rideProvider.activeCampaign!.id.toString();
+    final campaignId = rideProvider.activeCampaign!.id;
 
     // Show loading dialog
     showDialog(
@@ -681,15 +684,14 @@ class MyRidePage extends StatelessWidget {
     Navigator.of(context).pop();
 
     // Check has_uploaded_before
-    final hasUploadedBefore =
-        rideProvider.weeklyUploadStatus?['has_uploaded_before'] ?? false;
+    final shouldNavigate = rideProvider.shouldNavigateToUpload;
 
-    if (!hasUploadedBefore) {
+if (shouldNavigate) {
       // Navigate to ImageUploads
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ImageUploads(campaignId: campaignId),
+          builder: (context) => ImageUploads(campaignId: campaignId.toString()),
         ),
       );
       return;
@@ -734,7 +736,7 @@ class MyRidePage extends StatelessWidget {
         builder: (context) => AlertDialog(
           title: Text('Failed to Start Ride'),
           content: Text(
-            rideProvider.error ?? 'Unable to start ride. Please try again.',
+            'Unable to start ride. Please try again.',
           ),
           actions: [
             TextButton(

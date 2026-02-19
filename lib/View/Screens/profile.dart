@@ -5,6 +5,7 @@ import 'package:addrive/View/Screens/complaintpage.dart';
 import 'package:addrive/View/Screens/loginpage.dart';
 import 'package:addrive/View/Widgets/appbackground.dart';
 import 'package:addrive/View/Widgets/appfont.dart';
+import 'package:addrive/gpslogscreen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -548,8 +549,9 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ],
               ),
-              GestureDetector(
+              GestureDetector( 
                 onTap: () => _showLogoutConfirmation(),
+                // onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => GpsLogScreen())),
                 child: Text(
                   'Logout',
                   style: AppTextStyle.base.copyWith(
