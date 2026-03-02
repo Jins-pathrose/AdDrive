@@ -85,13 +85,17 @@ class HomePage extends StatelessWidget {
                     campaignData['status'] != 'active_campaign') {
                   return _buildFullScreenWithHeader(
                     context,
-                    RefreshIndicator(
-                      onRefresh: () => _refreshData(context),
-                      color: const Color(0xFF6C3FE4),
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: _buildCenteredContent(
-                          _buildNoActiveCampaignHandler(context),
+                    Center(
+                      child: RefreshIndicator(
+                        onRefresh: () => _refreshData(context),
+                        color: const Color(0xFF6C3FE4),
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Center(
+                            child: _buildCenteredContent(
+                              Center(child: _buildNoActiveCampaignHandler(context)),
+                            ),
+                          ),
                         ),
                       ),
                     ),

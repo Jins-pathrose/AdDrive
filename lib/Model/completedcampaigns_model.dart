@@ -1,6 +1,5 @@
 // models/completed_campaign_model.dart
 import 'package:intl/intl.dart';
-
 class CompletedCampaign {
   final String campaignId;
   final String campaignName;
